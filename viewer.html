@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gitdraw canvas</title>
+<style>
+  :root { --bg:#f5f6f8; --ink:#111827; --muted:#6b7280; --panel:#fff; --line:#e5e7eb; --accent:#4f46e5;
+          --shadow:0 0 0 1px rgba(16,24,40,.06), 0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.08);
+          --font:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif; --mono:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  * { box-sizing:border-box }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink); overflow:hidden; font:13px/1.4 var(--font);
+              -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale }
+  #bar { position:fixed; top:14px; left:14px; z-index:3; display:flex; gap:4px; align-items:center; background:var(--panel);
+         border-radius:16px; padding:6px; box-shadow:var(--shadow); max-width:calc(100% - 28px); flex-wrap:wrap }
+  #bar .sep { width:1px; height:20px; background:var(--line); margin:0 4px }
+  button, select, input { font:inherit; color:inherit }
+  button, select { background:transparent; border:0; border-radius:10px; padding:7px 11px; cursor:pointer; font-weight:500;
+                   transition:background-color .12s ease-out, transform .12s ease-out }
+  button:hover, select:hover { background:#f0f1f4 }
+  button:active { transform:scale(.96) }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline:2px solid var(--accent); outline-offset:1px }
+  button.primary { background:var(--accent); color:#fff } button.primary:hover { background:#4338ca }
+  button:disabled { opacity:.55; cursor:progress }
+  select { max-width:230px; padding-right:6px }
+  #status { color:var(--muted); padding:0 10px 0 6px; font-size:12px; font-variant-numeric:tabular-nums }
+  #pop { position:fixed; top:68px; left:14px; z-index:3; width:400px; background:var(--panel); border-radius:18px;
+         box-shadow:var(--shadow); padding:16px; display:none }
+  #pop.open { display:block } #pop h3 { margin:0 0 10px; font-size:14px }
+  #pop .row { display:flex; gap:8px } #pop input { flex:1; border:0; border-radius:10px; padding:9px 11px; outline:none; box-shadow:0 0 0 1px var(--line) inset }
+  #pop input:focus { box-shadow:0 0 0 2px var(--accent) inset }
+  #sug { margin-top:8px; border-radius:12px; max-height:220px; overflow:auto; display:none; box-shadow:0 0 0 1px var(--line) inset; padding:4px }
+  #sug.open { display:block } #sug div { padding:6px 8px; border-radius:8px; cursor:pointer; display:flex; gap:8px; align-items:center; font-size:12.5px }
+  #sug div.on, #sug div:hover { background:#eef2ff } #sug i { font-style:normal; margin-left:auto; font-size:10px; font-weight:700; color:#15803d; background:#dcfce7; border-radius:8px; padding:1px 7px }
+  #pop p { margin:10px 0 0; color:var(--muted); font-size:12px; text-wrap:pretty } #pop p.err { color:#dc2626 }
+  #zoom { position:fixed; right:14px; bottom:14px; z-index:3; display:flex; align-items:center; background:var(--panel); border-radius:14px; box-shadow:var(--shadow); padding:4px }
+  #zoom button { padding:5px 10px } #zl { min-width:46px; text-align:center; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums }
+  #hint { position:fixed; left:14px; bottom:14px; z-index:3; color:var(--muted); font-size:12px; background:rgba(255,255,255,.8); backdrop-filter:blur(6px); padding:6px 10px; border-radius:10px }
+  @media (max-width:1100px) { #hint { display:none } }
+  #cv { width:100%; height:100%; display:block; cursor:grab; touch-action:none; user-select:none } #cv.drag { cursor:grabbing }
+  svg text { user-select:none; -webkit-user-select:none; pointer-events:none; font-family:var(--font) }
+  .sheet { fill:#fff; filter:url(#sheetShadow) }
+  .node { cursor:grab } .node.lift { cursor:grabbing }
+  .node .card { filter:url(#nodeShadow) } .node:hover .card { filter:url(#nodeShadowHover) } .node.lift .card { filter:url(#nodeLift) }
+  .btn { cursor:pointer } .btn rect { fill:#fff; stroke:var(--line) } .btn:hover rect { fill:#f3f4f6 } .btn text { font-size:12px; font-weight:600; fill:var(--ink) }
+  .mono { font-family:var(--mono) }
+</style>
+</head>
+<body>
+<div id="bar">
+  <select id="repo" title="Repository" aria-label="Repository"></select>
+  <button id="rmBtn" title="Remove this repo from the list" aria-label="Remove repo" style="padding:7px 9px">✕</button>
+  <button id="addBtn">+ Add repo</button>
+  <span class="sep"></span>
+  <button class="primary" id="reload">Reload</button>
+  <button id="fitNew">Latest</button>
+  <button id="fitAll">Fit all</button>
+  <span id="status" role="status">loading…</span>
+</div>
+<div id="pop">
+  <h3>Add a repository</h3>
+  <div class="row"><input id="src" placeholder="owner/repo, github.com URL, or local folder" spellcheck="false" autocomplete="off"><button class="primary" id="addGo">Add</button></div>
+  <div id="sug"></div>
+  <p id="popmsg">Paste a GitHub URL or <code>owner/repo</code> — it is read through the GitHub API with your <code>gh</code> login, nothing is cloned. For a local folder, start typing a path (<code>/</code> or <code>~</code>) and pick from the suggestions.</p>
+</div>
+<div id="hint">Drag cards to rearrange · drag the canvas or scroll to pan · pinch or ⌘/Ctrl + scroll to zoom</div>
+<svg id="cv" xmlns="http://www.w3.org/2000/svg">
+  <defs id="defs">
+    <filter id="sheetShadow" x="-5%" y="-5%" width="110%" height="110%"><feDropShadow dx="0" dy="6" stdDeviation="14" flood-color="#101828" flood-opacity=".08"/><feDropShadow dx="0" dy="0" stdDeviation=".5" flood-color="#101828" flood-opacity=".18"/></filter>
+    <filter id="nodeShadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#101828" flood-opacity=".08"/><feDropShadow dx="0" dy="0" stdDeviation=".4" flood-color="#101828" flood-opacity=".22"/></filter>
+    <filter id="nodeShadowHover" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#101828" flood-opacity=".12"/><feDropShadow dx="0" dy="0" stdDeviation=".4" flood-color="#101828" flood-opacity=".28"/></filter>
+    <filter id="nodeLift" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#101828" flood-opacity=".2"/><feDropShadow dx="0" dy="0" stdDeviation=".4" flood-color="#101828" flood-opacity=".3"/></filter>
+    <filter id="newGlow" x="-25%" y="-25%" width="150%" height="170%"><feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#16a34a" flood-opacity=".5"/></filter>
+  </defs>
+  <g id="world"></g>
+</svg>
+<div id="zoom"><button id="zo" aria-label="Zoom out">−</button><span id="zl">100%</span><button id="zi" aria-label="Zoom in">+</button></div>
+<script>
+const NS = 'http://www.w3.org/2000/svg', GAP = 200, PAD = 44;
+const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif', MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
+const $ = id => document.getElementById(id), cv = $('cv'), world = $('world'), defs = $('defs');
+const status = t => $('status').textContent = t;
+const store = { get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+                set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+let view = { x: 40, y: 20, k: 1 }, layout = [], data = null, repos = [], cur = store.get('gd-repo', null);
+let expanded = new Set(store.get('gd-exp', [])), POS = store.get('gd-pos', {});
+
+const el = (tag, attrs = {}, parent) => {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  parent && parent.appendChild(n); return n;
+};
+const txt = (parent, s, attrs) => { const t = el('text', attrs, parent); t.textContent = s; return t; };
+const api = async (path, opts = {}) => {
+  const r = await fetch(path, { ...opts, headers: { 'X-Gitdraw': '1', 'Content-Type': 'application/json' } });
+  const j = await r.json();
+  if (j.error) throw new Error(j.error);
+  return j;
+};
+
+// ---- text measuring: the browser's own font metrics, so nothing ever spills out of a card ----
+const mctx = document.createElement('canvas').getContext('2d');
+const tw = (s, font) => { mctx.font = font; return mctx.measureText(s).width; };
+const fit1 = (s, font, max) => {
+  if (tw(s, font) <= max) return s;
+  while (s.length > 1 && tw(s + '…', font) > max) s = s.slice(0, -1);
+  return s.trimEnd() + '…';
+};
+const wrap = (s, font, max, lines) => {  // greedy word wrap, last line ellipsised
+  const words = s.split(/\s+/), out = [];
+  let line = '';
+  for (let i = 0; i < words.length; i++) {
+    const t = line ? line + ' ' + words[i] : words[i];
+    if (tw(t, font) <= max || !line) { line = t; continue; }
+    out.push(line); line = words[i];
+    if (out.length === lines - 1) { line = words.slice(i).join(' '); break; }
+  }
+  out.push(line);
+  return out.map(l => fit1(l, font, max));
+};
+const initials = n => (n.match(/\b\w/g) || ['?']).slice(0, 2).join('').toUpperCase();
+const AV = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#ec4899'];
+const avColor = n => AV[[...n].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
+const PRC = { MERGED: ['#6d28d9', '#ede9fe'], OPEN: ['#15803d', '#dcfce7'], CLOSED: ['#b91c1c', '#fee2e2'] };
+
+const applyView = () => {
+  world.setAttribute('transform', `translate(${view.x} ${view.y}) scale(${view.k})`);
+  const s = 22 * view.k, a = Math.max(0, Math.min(1, (view.k - 0.25) / 0.3)) * 0.1;  // very faint dots, fade out when zoomed far out
+  document.body.style.backgroundImage = `radial-gradient(rgba(17,24,39,${a}) 1px, transparent 1.3px)`;
+  document.body.style.backgroundSize = `${s}px ${s}px`;
+  document.body.style.backgroundPosition = `${view.x}px ${view.y}px`;
+  $('zl').textContent = Math.round(view.k * 100) + '%';
+};
+const bbox = els => {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const e of els) {
+    const pts = e.type === 'arrow' ? e.points.map(p => [e.x + p[0], e.y + p[1]]) : [[e.x, e.y], [e.x + e.width, e.y + e.height]];
+    for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  }
+  return { x0, y0, x1, y1 };
+};
+const marker = color => {
+  const id = 'm' + color.replace('#', '');
+  if (!document.getElementById(id)) {
+    const m = el('marker', { id, viewBox: '0 0 10 10', refX: 8.5, refY: 5, markerWidth: 8, markerHeight: 8, orient: 'auto-start-reverse' }, defs);
+    el('path', { d: 'M1 1L9 5L1 9', fill: 'none', stroke: color, 'stroke-width': 1.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, m);
+  }
+  return `url(#${id})`;
+};
+// ---- edges: rounded orthogonal paths; the server's collision-free route until a card is moved ----
+const rounded = (p, r = 10) => {
+  let d = `M${p[0][0]} ${p[0][1]}`;
+  for (let i = 1; i < p.length - 1; i++) {
+    const [x0, y0] = p[i - 1], [x1, y1] = p[i], [x2, y2] = p[i + 1];
+    const l1 = Math.hypot(x1 - x0, y1 - y0) || 1, l2 = Math.hypot(x2 - x1, y2 - y1) || 1, k = Math.min(r, l1 / 2, l2 / 2);
+    d += ` L${x1 + (x0 - x1) * k / l1} ${y1 + (y0 - y1) * k / l1} Q${x1} ${y1} ${x1 + (x2 - x1) * k / l2} ${y1 + (y2 - y1) * k / l2}`;
+  }
+  const L = p[p.length - 1]; return d + ` L${L[0]} ${L[1]}`;
+};
+const step = (A, B) => {
+  const vert = (s, e) => { const my = (s[1] + e[1]) / 2; return Math.abs(s[0] - e[0]) < 1 ? [s, e] : [s, [s[0], my], [e[0], my], e]; };
+  if (B.y >= A.y + A.h + 8) return vert([A.x + A.w / 2, A.y + A.h], [B.x + B.w / 2, B.y]);
+  if (B.y + B.h <= A.y - 8) return vert([A.x + A.w / 2, A.y], [B.x + B.w / 2, B.y + B.h]);
+  const right = B.x > A.x, s = [right ? A.x + A.w : A.x, A.y + A.h / 2], e = [right ? B.x : B.x + B.w, B.y + B.h / 2], mx = (s[0] + e[0]) / 2;
+  return [s, [mx, s[1]], [mx, e[1]], e];
+};
+
+// ---- card renderers ----
+const commitCard = (g, e, cd, isNew) => {
+  const { x, y, width: w, height: h } = e, acc = cd.accent, r = 12;
+  const card = el('g', { class: 'card' }, g);
+  const body = el('rect', { x, y, width: w, height: h, rx: r, fill: '#fff', stroke: cd.fork ? '#ea580c' : (cd.unpushed ? '#9ca3af' : '#e5e7eb'),
+                            'stroke-width': cd.fork ? 2 : 1, 'stroke-dasharray': cd.unpushed ? '5 4' : '' }, card);
+  el('path', { d: `M${x + 6} ${y} H${x + r} A${r} ${r} 0 0 0 ${x} ${y + r} V${y + h - r} A${r} ${r} 0 0 0 ${x + r} ${y + h} H${x + 6} Z`, fill: acc }, card);
+  if (isNew) { card.setAttribute('filter', 'url(#newGlow)'); body.setAttribute('stroke', '#16a34a'); body.setAttribute('stroke-width', 1.5); }
+  const px = x + 18, right = x + w - 14;
+  const hf = `600 10.5px ${MONO}`, hw = tw(cd.hash, hf) + 14;
+  el('rect', { x: px, y: y + 12, width: hw, height: 19, rx: 6, fill: cd.tint }, g);
+  txt(g, cd.hash, { x: px + 7, y: y + 25.5, 'font-size': 10.5, 'font-weight': 600, fill: acc, class: 'mono' });
+  txt(g, cd.date, { x: right, y: y + 25.5, 'font-size': 11, fill: '#9ca3af', 'text-anchor': 'end' });
+  const lines = wrap(cd.msg, `600 13px ${FONT}`, w - 18 - 14, 2);
+  lines.forEach((l, i) => txt(g, l, { x: px, y: y + 50 + i * 16, 'font-size': 13, 'font-weight': 600, fill: '#111827' }));
+  const cy = y + h - 16;  // author row + state tag
+  el('circle', { cx: px + 7, cy, r: 7.5, fill: avColor(cd.author) }, g);
+  txt(g, initials(cd.author), { x: px + 7, y: cy + 2.7, 'font-size': 7, 'font-weight': 700, fill: '#fff', 'text-anchor': 'middle' });
+  const tag = cd.fork ? [cd.fork, '#c2410c', '#ffedd5'] : cd.merge ? ['MERGE', '#c2410c', '#ffedd5'] : null;
+  let avail = right - (px + 20);
+  if (tag) {
+    const tf = `700 9px ${FONT}`, t = fit1(tag[0], tf, avail * 0.55 - 12), tww = tw(t, tf) + 12;
+    el('rect', { x: right - tww, y: cy - 8, width: tww, height: 16, rx: 8, fill: tag[2] }, g);
+    txt(g, t, { x: right - tww / 2, y: cy + 3.2, 'font-size': 9, 'font-weight': 700, fill: tag[1], 'text-anchor': 'middle' });
+    avail -= tww + 8;
+  }
+  txt(g, fit1(cd.author, `11.5px ${FONT}`, avail), { x: px + 20, y: cy + 4, 'font-size': 11.5, fill: '#6b7280' });
+};
+const pointerCard = (g, e, cd) => {
+  const { x, y, width: w, height: h } = e, acc = cd.accent;
+  const card = el('g', { class: 'card' }, g);
+  el('rect', { x, y, width: w, height: h, rx: 12, fill: '#fff', stroke: acc, 'stroke-width': 1.5 }, card);
+  const L = cd.lines, px = x + 14;
+  el('circle', { cx: px + 4, cy: y + 22, r: 4, fill: acc }, g);
+  txt(g, fit1(L[0], `700 13.5px ${FONT}`, w - 40), { x: px + 16, y: y + 26.5, 'font-size': 13.5, 'font-weight': 700, fill: '#111827' });
+  L.slice(1).forEach((l, i) => {
+    const cy = y + 22 + 18 * (i + 1);
+    if (l.startsWith('PR #')) {
+      const c = PRC[cd.pr || 'OPEN'] || PRC.OPEN, f = `700 10px ${FONT}`, t = fit1(l, f, w - 40), pw = tw(t, f) + 14;
+      el('rect', { x: px, y: cy - 9, width: pw, height: 18, rx: 9, fill: c[1] }, g);
+      txt(g, t, { x: px + pw / 2, y: cy + 3.5, 'font-size': 10, 'font-weight': 700, fill: c[0], 'text-anchor': 'middle' });
+    } else txt(g, fit1(l.replace(/^-> /, '↗ '), `11.5px ${FONT}`, w - 28), { x: px, y: cy + 4, 'font-size': 11.5, fill: '#6b7280' });
+  });
+};
+const noteCard = (g, e) => {
+  const { x, y, width: w, height: h } = e;
+  const card = el('g', { class: 'card' }, g);
+  el('rect', { x, y, width: w, height: h, rx: 12, fill: '#f9fafb', stroke: '#9ca3af', 'stroke-width': 1, 'stroke-dasharray': '5 4' }, card);
+  const [a, b] = (e._text || '').split('\n');
+  txt(g, a, { x: x + w / 2, y: y + h / 2 - (b ? 3 : -4), 'font-size': 12.5, 'font-weight': 600, fill: '#374151', 'text-anchor': 'middle' });
+  if (b) txt(g, b, { x: x + w / 2, y: y + h / 2 + 13, 'font-size': 11, fill: '#6b7280', 'text-anchor': 'middle' });
+};
+const legendPill = (g, e) => {
+  const { x, y, width: w, height: h } = e, dashed = e.strokeStyle === 'dashed';
+  el('rect', { x, y, width: w, height: h, rx: h / 2, fill: '#fff', stroke: '#e5e7eb' }, g);
+  el('circle', { cx: x + 14, cy: y + h / 2, r: 5, fill: dashed ? 'none' : e.strokeColor, stroke: e.strokeColor, 'stroke-width': 1.5, 'stroke-dasharray': dashed ? '2 2' : '' }, g);
+  txt(g, e._text, { x: x + 26, y: y + h / 2 + 4, 'font-size': 11.5, fill: '#374151' });
+};
+const pill = (g, x, y, text, bg, fg) => {
+  const w = tw(text, `700 10px ${FONT}`) + 16;
+  el('rect', { x, y: y - 13, width: w, height: 19, rx: 9.5, fill: bg }, g);
+  txt(g, text, { x: x + 8, y, 'font-size': 10, 'font-weight': 700, fill: fg });
+  return w;
+};
+
+const hashes = s => new Set((s.els_full || s.els).filter(e => e.customData && e.customData.hash).map(e => e.customData.hash));
+const drawSnapshot = (s, older) => {
+  const g = el('g', { transform: `translate(${s.ox - s.box.x0} 0)` }, world), b = s.box;
+  const seen = older ? hashes(older) : null;
+  const key = `${cur}|${s.ts}|${s.open ? 'f' : 'c'}`, off = POS[key] || (POS[key] = {});
+  const top = b.y0 - 118, x0 = b.x0 - PAD, W = b.x1 - b.x0 + PAD * 2;
+  el('rect', { class: 'sheet', x: x0, y: top, width: W, height: b.y1 - top + PAD + 24, rx: 26 }, g);
+  txt(g, `SNAPSHOT #${s.n}`, { x: b.x0, y: top + 40, 'font-size': 11, 'font-weight': 700, fill: '#9ca3af', 'letter-spacing': '.08em' });
+  let px = b.x0 + 96;
+  if (s.latest) px += pill(g, px, top + 40, 'LATEST', '#eef2ff', '#4338ca') + 8;
+  let fresh = 0;
+  for (const e of s.cur) if (seen && e.customData && e.customData.hash && !seen.has(e.customData.hash)) fresh++;
+  if (fresh) pill(g, px, top + 40, `${fresh} new commit${fresh > 1 ? 's' : ''}`, '#dcfce7', '#15803d');
+  const m = s.meta || {};
+  txt(g, `${data.repo}${m.base ? ' · ' + m.base : ''}`, { x: b.x0, y: top + 70, 'font-size': 22, 'font-weight': 650, fill: '#111827' });
+  const stats = m.branches != null ? `${m.branches} other branch${m.branches === 1 ? '' : 'es'}${m.skipped ? ` (+${m.skipped} older not shown)` : ''} · ` : '';
+  txt(g, stats + s.ts, { x: b.x0, y: top + 90, 'font-size': 12, fill: '#6b7280' });
+  const buttons = [];
+  if (s.els_full) buttons.push([s.open ? 'Collapse history' : 'Show all commits', () => toggle(s.ts)]);
+  if (Object.keys(off).length) buttons.push(['Reset layout', () => { delete POS[key]; store.set('gd-pos', POS); render(); }]);
+  let bx = b.x1;
+  for (const [label, fn] of buttons) {
+    const bw = tw(label, `600 12px ${FONT}`) + 28; bx -= bw;
+    const btn = el('g', { class: 'btn', transform: `translate(${bx} ${top + 28})` }, g);
+    el('rect', { width: bw, height: 30, rx: 10 }, btn); txt(btn, label, { x: bw / 2, y: 19.5, 'text-anchor': 'middle' });
+    btn.onclick = fn; bx -= 8;
+  }
+  const byId = Object.fromEntries(s.cur.map(e => [e.id, e]));
+  for (const e of s.cur) if (e.type === 'text' && e.containerId && byId[e.containerId]) byId[e.containerId]._text = e.text;
+  const edgeLayer = el('g', {}, g), nodeLayer = el('g', {}, g), nodes = {};
+  const rect = id => { const n = nodes[id]; return { x: n.e.x + n.dx, y: n.e.y + n.dy, w: n.e.width, h: n.e.height }; };
+  const moved = id => nodes[id].dx || nodes[id].dy;
+  for (const e of s.cur) if (e.type === 'rectangle') {
+    const cd = e.customData || {}, k = cd.kind;
+    if (k === 'legend') { legendPill(g, e); continue; }
+    const ng = el('g', { class: 'node' }, nodeLayer);
+    const n = nodes[e.id] = { e, g: ng, dx: (off[e.id] || [0, 0])[0], dy: (off[e.id] || [0, 0])[1], edges: [] };
+    ng.setAttribute('transform', `translate(${n.dx} ${n.dy})`);
+    if (k === 'commit') commitCard(ng, e, cd, seen && cd.hash && !seen.has(cd.hash));
+    else if (k === 'pointer') pointerCard(ng, e, cd);
+    else noteCard(ng, e);
+    ng.onpointerdown = ev => { ev.stopPropagation(); dragNode = { n, key, off, onClick: k === 'more' ? () => toggle(s.ts) : null, sx: ev.clientX, sy: ev.clientY, ox: n.dx, oy: n.dy, moved: false }; };
+  }
+  for (const e of s.cur) if (e.type === 'arrow' && nodes[e.startBinding.elementId] && nodes[e.endBinding.elementId]) {
+    const a = e.startBinding.elementId, bb = e.endBinding.elementId, acd = nodes[a].e.customData || {};
+    const color = acd.kind === 'pointer' ? acd.accent : e.strokeColor === '#e03131' ? '#ef4444' : '#a3a9b5';
+    const path = el('path', { fill: 'none', stroke: color, 'stroke-width': 1.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'marker-end': marker(color) }, edgeLayer);
+    const pts = e.points.map(p => [e.x + p[0], e.y + p[1]]);
+    const ed = { upd: () => path.setAttribute('d', rounded(moved(a) || moved(bb) ? step(rect(a), rect(bb)) : pts)) };
+    nodes[a].edges.push(ed); nodes[bb].edges.push(ed); ed.upd();
+  }
+};
+// ---- dragging cards (window-level so a fast drag never loses the card) ----
+let dragNode = null;
+window.addEventListener('pointermove', ev => {
+  const d = dragNode; if (!d) return;
+  const dx = (ev.clientX - d.sx) / view.k, dy = (ev.clientY - d.sy) / view.k;
+  if (!d.moved && Math.hypot(dx, dy) * view.k < 4) return;
+  if (!d.moved) { d.moved = true; d.n.g.classList.add('lift'); d.n.g.parentNode.appendChild(d.n.g); }
+  d.n.dx = d.ox + dx; d.n.dy = d.oy + dy;
+  d.n.g.setAttribute('transform', `translate(${d.n.dx} ${d.n.dy})`);
+  d.n.edges.forEach(ed => ed.upd());
+});
+window.addEventListener('pointerup', () => {
+  const d = dragNode; if (!d) return; dragNode = null;
+  d.n.g.classList.remove('lift');
+  if (!d.moved) return d.onClick && d.onClick();
+  d.off[d.n.e.id] = [Math.round(d.n.dx), Math.round(d.n.dy)];
+  store.set('gd-pos', POS); render();  // re-render so "Reset layout" appears; view is untouched
+});
+const toggle = ts => { expanded.has(ts) ? expanded.delete(ts) : expanded.add(ts); store.set('gd-exp', [...expanded]); render(); };
+const render = () => {
+  world.innerHTML = '';
+  const snaps = data.snapshots.map((s, i) => {
+    const open = expanded.has(s.ts) && !!s.els_full, cur = open ? s.els_full : s.els;
+    const box = bbox(cur.filter(e => e.type !== 'text' || e.containerId)); box.x1 = Math.max(box.x1, box.x0 + 620);
+    return { ...s, n: i + 1, open, cur, box, latest: i === data.snapshots.length - 1 };
+  });
+  let ox = 0; layout = [];
+  for (const s of snaps.slice().reverse()) { s.ox = ox; layout.push(s); ox += s.box.x1 - s.box.x0 + PAD * 2 + GAP; }
+  layout.forEach(s => drawSnapshot(s, snaps[s.n - 2]));
+  applyView();
+};
+const fit = list => {
+  if (!list.length) return;
+  const x1 = Math.max(...list.map(s => s.ox + s.box.x1 - s.box.x0 + PAD)), y1 = Math.max(...list.map(s => s.box.y1 + PAD + 24)), y0 = -118;
+  const W = cv.clientWidth - 80, H = cv.clientHeight - 110;
+  view.k = Math.min(1, W / (x1 + PAD), H / (y1 - y0 + 20));
+  view.x = 40 + PAD * view.k; view.y = 90 - y0 * view.k; applyView();
+};
+const latest = () => layout.length ? [layout[0]] : [];
+const busy = (on, msg) => { $('reload').disabled = on; if (msg) status(msg); };
+const openRepo = async reload => {
+  busy(true, reload ? 'reading git…' : 'loading…');
+  try {
+    let d = reload ? await api(`/api/reload?repo=${cur}`, { method: 'POST' }) : await api(`/api/history?repo=${cur}`);
+    if (!d.snapshots.length) d = await api(`/api/reload?repo=${cur}`, { method: 'POST' });
+    data = d; render(); fit(latest());
+    const n = d.snapshots.length;
+    status(reload && d.changed === false ? `No changes since snapshot #${n}` : `${n} snapshot${n > 1 ? 's' : ''} · ${d.snapshots[n - 1].ts}`);
+  } catch (e) { status('error: ' + e.message); }
+  busy(false);
+};
+const fillRepos = () => {
+  $('repo').innerHTML = repos.map(r => `<option value="${r.id}">${r.kind === 'github' ? '⌁ ' : ''}${r.name}</option>`).join('');
+  $('repo').value = cur;
+  $('rmBtn').style.display = repos.length > 1 ? '' : 'none';
+};
+$('repo').onchange = e => { cur = e.target.value; store.set('gd-repo', cur); openRepo(false); };
+$('reload').onclick = () => openRepo(true);
+$('fitNew').onclick = () => fit(latest());
+$('fitAll').onclick = () => fit(layout);
+$('addBtn').onclick = () => { $('pop').classList.toggle('open'); $('src').focus(); };
+const addRepo = async () => {
+  const src = $('src').value.trim(), m = $('popmsg');
+  if (!src) return;
+  $('addGo').disabled = true; m.className = ''; m.textContent = 'Adding…';
+  try {
+    const r = await api('/api/repos', { method: 'POST', body: JSON.stringify({ source: src }) });
+    repos = r.repos; cur = r.added; store.set('gd-repo', cur); fillRepos();
+    $('pop').classList.remove('open'); $('src').value = ''; m.textContent = ''; await openRepo(true);
+  } catch (e) { m.className = 'err'; m.textContent = e.message; }
+  $('addGo').disabled = false;
+};
+$('addGo').onclick = addRepo;
+$('rmBtn').onclick = async () => {
+  try {
+    repos = (await api('/api/repos/remove', { method: 'POST', body: JSON.stringify({ id: cur }) })).repos;
+    cur = repos[0].id; store.set('gd-repo', cur); fillRepos(); openRepo(false);
+  } catch (e) { status(e.message); }
+};
+// terminal-style folder suggestions
+let sugs = [], sel = -1, sugTimer = null;
+const showSugs = () => {
+  const box = $('sug');
+  box.classList.toggle('open', sugs.length > 0); box.innerHTML = '';
+  sugs.forEach((d, i) => {
+    const row = document.createElement('div'); row.className = i === sel ? 'on' : '';
+    row.innerHTML = `<span>📁</span><span></span>${d.git ? '<i>git</i>' : ''}`; row.children[1].textContent = d.name + '/';
+    row.onmousedown = e => { e.preventDefault(); pick(i); };
+    box.appendChild(row);
+  });
+};
+const fetchSugs = async () => {
+  const v = $('src').value;
+  if (!/^[~\/.]/.test(v)) { sugs = []; return showSugs(); }
+  try { sugs = (await api('/api/ls?q=' + encodeURIComponent(v))).dirs; } catch { sugs = []; }
+  sel = -1; showSugs();
+};
+const pick = i => { $('src').value = sugs[i].path + '/'; $('src').focus(); fetchSugs(); };
+$('src').oninput = () => { clearTimeout(sugTimer); sugTimer = setTimeout(fetchSugs, 100); };
+$('src').onkeydown = e => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { if (sugs.length) { e.preventDefault(); sel = (sel + (e.key === 'ArrowDown' ? 1 : -1) + sugs.length) % sugs.length; showSugs(); } }
+  else if (e.key === 'Tab' && sugs.length) { e.preventDefault(); pick(sel >= 0 ? sel : 0); }
+  else if (e.key === 'Enter') { if (sel >= 0) pick(sel); else addRepo(); }
+  else if (e.key === 'Escape') { if (sugs.length) { sugs = []; showSugs(); } else $('pop').classList.remove('open'); }
+};
+// pan / zoom
+const zoomAt = (cx, cy, k) => {
+  k = Math.min(3, Math.max(0.05, k));
+  view.x = cx - (cx - view.x) * (k / view.k); view.y = cy - (cy - view.y) * (k / view.k); view.k = k; applyView();
+};
+let drag = null;
+cv.onpointerdown = e => { if (!e.target.closest('.btn,.node')) drag = { x: e.clientX - view.x, y: e.clientY - view.y }; };
+window.addEventListener('pointermove', e => { if (drag) { view.x = e.clientX - drag.x; view.y = e.clientY - drag.y; cv.classList.add('drag'); applyView(); } });
+window.addEventListener('pointerup', () => { drag = null; cv.classList.remove('drag'); });
+cv.onwheel = e => {
+  e.preventDefault();
+  if (e.ctrlKey || e.metaKey) zoomAt(e.clientX, e.clientY, view.k * Math.exp(-e.deltaY * 0.01));
+  else { view.x -= e.deltaX; view.y -= e.deltaY; applyView(); }
+};
+$('zi').onclick = () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, view.k * 1.25);
+$('zo').onclick = () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, view.k / 1.25);
+(async () => {
+  try {
+    repos = (await api('/api/repos')).repos;
+    if (!repos.some(r => r.id === cur)) cur = repos[0].id;
+    fillRepos(); await openRepo(true);
+  } catch (e) { status('error: ' + e.message); }
+})();
+</script>
+</body>
+</html>
