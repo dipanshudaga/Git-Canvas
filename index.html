@@ -156,6 +156,9 @@
   input { height:var(--c); padding:0 var(--s3); border:0; border-radius:var(--r2); box-shadow:0 0 0 1px var(--line) inset; font:var(--t-body); outline:none; background:#fff }
   input:focus { box-shadow:0 0 0 2px var(--accent) inset } input:focus-visible { outline:none }  /* one ring, not two */
   .ph { margin:var(--s5) 0 var(--s2) }
+  .alert { display:flex; gap:var(--s3); margin-top:var(--s3); padding:var(--s3) var(--s4); border-radius:var(--r2); background:var(--badbg); color:#7f1d1d; font:var(--t-caption); text-align:left }
+  .alert .i { flex:none; margin-top:2px; color:var(--bad) } .alert b { display:block; font:var(--t-label); color:#7f1d1d; margin-bottom:var(--s1) }
+  .alert .act { margin-top:var(--s2); height:var(--c-sm); padding:0 var(--s3); border-radius:var(--pill); background:#fff; color:#7f1d1d; font:var(--t-label); box-shadow:0 0 0 1px rgba(127,29,29,.2); cursor:pointer } .alert .act:hover { background:#fff1f2 }
   .note { margin-top:var(--s3); font:var(--t-caption); color:var(--muted) } .note.err { color:var(--bad) }
   .li { height:var(--c); display:flex; align-items:center; gap:var(--s2); padding:0 var(--s2); border-radius:var(--r1); font:var(--t-label); cursor:pointer } .li:hover { background:#f3f4f7 } .li.cur { background:var(--accent-bg) }
   .li .nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap } .li .kind { margin-left:auto; flex:none; display:inline-flex; align-items:center; height:20px; padding:0 var(--s2); border-radius:var(--pill); background:var(--fill); color:var(--muted); font:var(--t-caption-strong) }
@@ -202,7 +205,7 @@
   <div id="sug"></div>
   <h4 class="ph" id="repoHead">Repositories</h4>
   <div id="repoList"></div>
-  <p id="popmsg" class="note"></p>
+  <div id="popmsg"></div>
   <details id="tokenBox" style="display:none">
     <summary class="ph" style="cursor:pointer">Advanced</summary>
     <div class="in"><input type="password" id="tok" autocomplete="off" spellcheck="false"><button class="tb primary" id="tokSave">Save</button></div>
@@ -701,7 +704,12 @@ const openRepo = async reload => {
 };
 
 // ----- repository menu -----
-const setPopMsg = () => { const m = $('popmsg'); m.className = 'note'; m.textContent = ''; };
+const setPopMsg = () => { $('popmsg').innerHTML = ''; };
+function showErr(el, e) {
+  const rate = e.rate, tok = !!getToken();
+  el.innerHTML = `<div class="alert" role="alert">${ico('alert')}<div>${rate ? `<b>GitHub's free limit is used up</b>Try again in ${esc(e.wait)}${tok ? '.' : ', or add a token to keep going.'}` : esc(e.message)}${rate && !tok ? '<br><button class="act" id="addTok">Add a token</button>' : ''}</div></div>`;
+  const b = $('addTok'); if (b) b.onclick = () => { $('tokenBox').open = true; $('tok').focus(); };
+}
 const fillRepos = () => { $('repoName').textContent = (repos.find(r => r.id === cur) || {}).name || 'Add a repository'; };
 function renderRepoList() {
   $('repoHead').style.display = repos.length ? '' : 'none';
@@ -714,7 +722,7 @@ $('repoList').onclick = async e => {
     try {
       repos = (await api('api/repos/remove', { method: 'POST', body: JSON.stringify({ id: rm.dataset.rm }) })).repos;
       if (!repos.some(r => r.id === cur)) { cur = repos[0] ? repos[0].id : null; store.set('gc-repo', cur); fillRepos(); renderRepoList(); openRepo(false); } else { fillRepos(); renderRepoList(); }
-    } catch (err) { $('popmsg').className = 'note err'; $('popmsg').textContent = err.message; }
+    } catch (err) { showErr($('popmsg'), err); }
     return;
   }
   const li = e.target.closest('[data-id]'); if (li && li.dataset.id !== cur) { cur = li.dataset.id; store.set('gc-repo', cur); fillRepos(); closePops(); openRepo(false); }
@@ -725,8 +733,8 @@ async function addSource(src, msg, btn) {
   try {
     const r = await api('api/repos', { method: 'POST', body: JSON.stringify({ source: src }) });
     repos = r.repos; cur = r.added; store.set('gc-repo', cur); fillRepos(); renderRepoList(); closePops(); $('src').value = ''; setPopMsg();
-    await openRepo(true); if (msg) msg.textContent = '';
-  } catch (e) { if (msg) { msg.className = 'note err'; msg.textContent = e.message; } else toast(e.message); }
+    await openRepo(true); if (msg) msg.innerHTML = '';
+  } catch (e) { if (msg) showErr(msg, e); else toast(e.message); }
   if (btn) btn.disabled = false;
 }
 const addRepo = () => addSource($('src').value, $('popmsg'), $('addGo'));
@@ -771,7 +779,7 @@ async function ghReq(path, { gql } = {}) {
   } catch { throw new Error('Could not reach api.github.com. Check your connection.'); }
   const rem = r.headers.get('x-ratelimit-remaining'); if (rem != null) { rate.remaining = +rem; rate.limit = +r.headers.get('x-ratelimit-limit'); updateRate(); }
   if (r.status === 401) throw new Error('GitHub rejected the token (401). Remove it, or paste a new one.');
-  if (r.status === 403 || r.status === 429) throw new Error(rem === '0' ? `GitHub's free limit (60 requests per hour from your network) is used up. Try again in ${resetIn(r)}.${tok ? '' : ' Or add a token under Advanced in the repository menu.'}` : 'GitHub refused the request (403). ' + (tok ? 'Does the token have access to this repo (and is it authorised for SSO)?' : 'Most likely GitHub\'s free limit (60 requests per hour from your network) is used up, so try again in a while. It can also mean the repo is private.'));
+  if (r.status === 403 || r.status === 429) throw rem === '0' ? Object.assign(new Error('GitHub free limit used up'), { rate: true, wait: resetIn(r) }) : new Error('GitHub refused the request (403). ' + (tok ? 'Does the token have access to this repo (and is it authorised for SSO)?' : 'Most likely GitHub\'s free limit (60 requests per hour from your network) is used up, so try again in a while. It can also mean the repo is private.'));
   if (r.status === 404) throw new Error(tok ? 'Repository not found, or your token cannot see it.' : "Couldn't find that repository. Git Canvas opens public repositories without signing in. Private repo? Add a token under Advanced in the repository menu.");
   if (!r.ok) throw new Error('GitHub error ' + r.status);
   return r.json();
