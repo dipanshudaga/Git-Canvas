@@ -279,14 +279,14 @@ function layout() {
     (!flt.stale || ageDays(ln) < flt.stale) && (!flt.merged || ln.ahead > 0) && (!flt.conf || (ln.conflict && (ln.conflict.state === 'conflict' || ln.conflict.state === 'possible')))));
   const rank = l => { const k = laneOrder.indexOf(l.name); return k >= 0 ? k : 1e6 + l.i; };
   lanes = [lanes[0], ...lanes.slice(1).sort((a, b) => rank(a) - rank(b))];  // main line stays first; the rest follow the order you dragged them into
-  lanes.forEach((ln, i) => { ln.col = i; ln.color = ln.is_base ? BASE_COLOR : COLORS[(ln.i - 1) % COLORS.length]; ln.x = i * COLX; ln.stale = !ln.is_base && flt.staleMark && ageDays(ln) > 90; });
+  lanes.forEach((ln, i) => { ln.mbm = ln.mb_main || ln.mb; ln.col = i; ln.color = ln.is_base ? BASE_COLOR : COLORS[(ln.i - 1) % COLORS.length]; ln.x = i * COLX; ln.stale = !ln.is_base && flt.staleMark && ageDays(ln) > 90; });
   const base = lanes[0], baseIdx = Object.fromEntries(base.commits.map((c, i) => [c.hash, i]));
   for (const ln of lanes) {
     const all = ln.commits;
     let n = START;
     if (ln.is_base) {  // keep the main line visible down to the deepest fork point so every branch hangs off something
-      const forks = lanes.filter(l => !l.is_base && l.mb in baseIdx).map(l => baseIdx[l.mb] + 1);
-      n = Math.min(all.length, Math.max(START, Math.min(40, Math.max(0, ...forks))));
+      const forks = lanes.filter(l => !l.is_base && l.mbm in baseIdx).map(l => baseIdx[l.mbm] + 1);
+      n = Math.min(all.length, Math.max(START, ...forks, 0));
     }
     ln.open = expanded.has(ln.name);
     ln.shown = ln.open ? all : all.slice(0, n);
@@ -299,9 +299,13 @@ function layout() {
   const foldOf = {};
   for (const ln of lanes) if (ln.hiddenLocal > 0 && ln.shown.length) {
     const id = '~fold:' + ln.name, oldest = ln.shown[ln.shown.length - 1];
-    owner[id] = ln; byHash[id] = { hash: id, ct: oldest.ct - 1, parents: ln.mb && ln.mb in owner ? [ln.mb] : [] }; foldOf[oldest.hash] = id;
+    owner[id] = ln; byHash[id] = { hash: id, ct: oldest.ct - 1, parents: ln.mbm && ln.mbm in owner ? [ln.mbm] : [] }; foldOf[oldest.hash] = id;
   }
-  const rpar = h => foldOf[h] ? [foldOf[h], ...byHash[h].parents.slice(1)] : byHash[h].parents;
+  const attachOf = {};  // oldest commit of a fully shown branch whose real parent is not drawn: it hangs off the main-line commit that contains the fork point
+  for (const ln of lanes) if (!ln.is_base && !ln.hiddenLocal && ln.shown.length && ln.mbm in owner && owner[ln.mbm] !== ln) {
+    const o = ln.shown[ln.shown.length - 1]; if (!byHash[o.hash].parents.some(p => p in owner)) attachOf[o.hash] = ln.mbm;
+  }
+  const rpar = h => foldOf[h] ? [foldOf[h], ...byHash[h].parents.slice(1)] : attachOf[h] ? [attachOf[h], ...byHash[h].parents.slice(1)] : byHash[h].parents;
   const order = [], seen = new Set();
   const visit = h => { if (!(h in owner) || seen.has(h)) return; seen.add(h); rpar(h).forEach(visit); order.push(h); };
   Object.keys(owner).sort((a, b) => byHash[a].ct - byHash[b].ct).forEach(visit);
@@ -311,15 +315,17 @@ function layout() {
   const y0 = 296;  // room above the newest row for titles and PR cards
   const items = {};  // key -> {key, kind, lane, x, y, w, h, ...}
   const add = (key, kind, ln, x, y, w, h, extra) => items[key] = { key, kind, ln, x, y, w, h, ...extra };
-  const forkOf = {}; for (const ln of lanes) if (!ln.is_base && ln.mb) (forkOf[ln.mb] ||= []).push(ln.name);
+  const forkOf = {}; for (const ln of lanes) if (!ln.is_base && ln.mb) (forkOf[ln.mbm] ||= []).push(ln.name);
   for (const ln of lanes) {
     ln.cards = ln.shown.filter(c => owner[c.hash] === ln).map(c => add(c.hash, 'card', ln, ln.x, y0 + (maxRow - row[c.hash]) * ROWY, CW, CH, { c }));
     const top = ln.cards.length ? Math.min(...ln.cards.map(k => k.y)) : y0;
     ln.tip = ln.cards.find(k => k.y === top) || null;
-    let y = top;
+    let y = top, headY;
     ln.prItem = null;
-    if (ln.pr) { y -= PRH + GAP; ln.prItem = add('pr:' + ln.name, 'pr', ln, ln.x, y, CW, PRH, { pr: ln.pr }); }
-    ln.headItem = add('head:' + ln.name, 'head', ln, ln.x, y - GAP - HEAD_H, CW, HEAD_H);
+    ln.pinned = !ln.cards.length && ln.mbm && items[ln.mbm] && items[ln.mbm].kind === 'card' ? items[ln.mbm] : null;  // nothing of its own to draw: sit next to the commit it points at
+    if (ln.pinned) { headY = ln.pinned.y; if (ln.pr) ln.prItem = add('pr:' + ln.name, 'pr', ln, ln.x, headY - GAP - PRH, CW, PRH, { pr: ln.pr }); }
+    else { if (ln.pr) { y -= PRH + GAP; ln.prItem = add('pr:' + ln.name, 'pr', ln, ln.x, y, CW, PRH, { pr: ln.pr }); } headY = y - GAP - HEAD_H; }
+    ln.headItem = add('head:' + ln.name, 'head', ln, ln.x, headY, CW, HEAD_H);
     const lowest = ln.cards.length ? Math.max(...ln.cards.map(k => k.y)) : y0;
     ln.moreItem = null;
     if (ln.hiddenLocal > 0 || (ln.open && ln.commits.length > START) || (ln.more || 0) !== 0)
@@ -433,6 +439,7 @@ function drawEdges() {
     out += `<path d="${d}" stroke="${color}" stroke-width="${w}" fill="none" stroke-linecap="round" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
   };
   for (const ln of L.lanes) {  // title -> PR -> newest commit, and "older" chip
+    if (ln.pinned) { if (ln.prItem) vert(ln.headItem, ln.prItem, ln.color, 3); continue; }
     const chain = [ln.headItem, ln.prItem, ln.cards.length ? ln.cards.reduce((m, k) => k.y < m.y ? k : m) : null].filter(Boolean);
     for (let i = 0; i < chain.length - 1; i++) vert(chain[i + 1], chain[i], ln.color, 3, i === 0 && chain.length === 3 ? null : null);
     if (ln.moreItem && ln.cards.length) vert(ln.moreItem, ln.cards.reduce((m, k) => k.y > m.y ? k : m), '#b8bcc6', 2.5, '4 5');
@@ -443,6 +450,11 @@ function drawEdges() {
       const right = P.x > C.x, ax = C.x + (right ? C.w : 0), bx = P.x + (right ? 0 : P.w), ay = C.y + C.h / 2, by = P.y + P.h / 2, mx = (ax + bx) / 2;
       out += `<path d="M${ax} ${ay} C${mx} ${ay} ${mx} ${by} ${bx} ${by}" stroke="${color}" stroke-width="2.5" fill="none" ${dash} stroke-linecap="round"/>`;
       out += `<circle cx="${ax}" cy="${ay}" r="4.5" fill="${color}"/><circle cx="${bx}" cy="${by}" r="4.5" fill="${color}"/>`; return;
+    }
+    if (Math.abs(C.y + C.h / 2 - (P.y + P.h / 2)) < 1) {  // same row: a straight line across
+      const right = P.x > C.x, ax = C.x + (right ? C.w : 0), bx = P.x + (right ? 0 : P.w), ay = C.y + C.h / 2;
+      out += `<path d="M${ax} ${ay} L${bx} ${ay}" stroke="${color}" stroke-width="2.5" fill="none" ${dash} stroke-linecap="round"/>`;
+      out += `<circle cx="${ax}" cy="${ay}" r="4.5" fill="${color}"/><circle cx="${bx}" cy="${ay}" r="4.5" fill="${color}"/>`; return;
     }
     // tidy: out of the side facing the other column, along the free gap between rows, into the other card's side
     const right = P.x > C.x, ax = C.x + (right ? C.w : 0), bx = P.x + (right ? 0 : P.w), dir = right ? 1 : -1, ay = C.y + C.h / 2, by = P.y + P.h / 2;
@@ -457,7 +469,14 @@ function drawEdges() {
     const isMerge = idx > 0 || k.ln.is_base;
     link(k, par, isMerge ? par.ln.color : k.ln.color, isMerge ? '' : 'stroke-dasharray="7 6"', idx);
   });
-  for (const ln of L.lanes) if (ln.moreItem && ln.hiddenLocal > 0 && ln.mb && L.at[ln.mb] && L.at[ln.mb].ln !== ln) link(ln.moreItem, L.at[ln.mb], ln.color, 'stroke-dasharray="2 6"', 0);
+  for (const ln of L.lanes) {  // a branch's oldest commit plugs into the main line, and a merged branch points at its commit
+    if (ln.pinned) link(ln.headItem, ln.pinned, ln.color, 'stroke-dasharray="2 6"', 0);
+    else if (!ln.is_base && ln.cards.length && !ln.hiddenLocal && ln.mbm && L.at[ln.mbm]) {
+      const o = ln.cards.reduce((m, k) => k.y > m.y ? k : m);
+      if (!o.c.parents.some(p => L.at[p])) link(o, L.at[ln.mbm], ln.color, 'stroke-dasharray="7 6"', 0);
+    }
+  }
+  for (const ln of L.lanes) if (ln.moreItem && ln.hiddenLocal > 0 && ln.mbm && L.at[ln.mbm] && L.at[ln.mbm].ln !== ln) link(ln.moreItem, L.at[ln.mbm], ln.color, 'stroke-dasharray="2 6"', 0);
   edges.innerHTML = out; edges.setAttribute('width', 1); edges.setAttribute('height', 1);
 }
 
@@ -516,11 +535,13 @@ function inspect(key) {
       p.push(ln.behind ? `<b>${ico('arrow-down', 'xs')} ${ln.behind} behind:</b> <b>${esc(base)}</b> got ${ln.behind} new commit${ln.behind > 1 ? 's' : ''} since this branch split off. Pull them in to stay up to date.` : '');
       why = `<div class="callout info">${p.filter(Boolean).join('<br><br>') || 'Identical to ' + esc(base)}</div>`;
     }
+    const mbc = ln.mbm && L.at[ln.mbm], sh = x => esc(String(x).slice(0, 7));
+    const forkRow = ln.is_base ? '' : kvRow('Forked from', mbc ? `<a class="link" data-goto="${esc(ln.mbm)}"><code>${sh(mbc.c.hash)}</code></a> on ${esc(base)} <span style="color:var(--muted)">${esc(fmtDate(mbc.c.date))}</span>` : (ln.mbm || ln.mb) ? `<code>${sh(ln.mbm || ln.mb)}</code> <span style="color:var(--muted)">older than the loaded history, so no line is drawn</span>` : '<span style="color:var(--muted)">unknown</span>');
     const stale = !ln.is_base && ageDays(ln) > 30 ? `<div class="callout warn"><b class="t">${ico('clock')}Stale</b>Last commit ${ago(ln.commits[0].ct)}. If it's abandoned or merged, consider deleting it.</div>` : '';
     const filesHtml = cf && cf.changed.length ? `<h4>Files changed on this branch (${cf.changed.length})</h4><div class="cmdnote" style="margin:0 0 8px">${cf.files.length ? '<b style="color:var(--bad)">Red</b> clashes with ' + esc(data.base) + '. ' : ''}</div>${fileList(cf.changed, cf.files)}` : '';
     const cmds = ln.is_base ? '' : `<h4>Try it</h4>${ln.ahead ? cmd(`git checkout ${base} && git merge ${ln.name}`) + '<div class="cmdnote">Merge this branch into ' + esc(base) + '.</div>' : ''}${ln.behind ? cmd(`git checkout ${ln.name} && git merge ${base}`) + '<div class="cmdnote">Bring this branch up to date. This is where you\'d resolve conflicts.</div>' : ''}${cmd(`git log ${base}..${ln.name} --oneline`)}<div class="cmdnote">List the commits only this branch has.</div>`;
     body = `${ln.is_base ? '' : `<div class="stats"><div class="stat"><b style="color:${ln.color}">${ln.ahead}</b><span>commits ahead</span></div><div class="stat"><b>${ln.behind}</b><span>commits behind</span></div></div>${tot ? `<div class="bar"><i style="width:${ln.ahead / tot * 100}%;background:${ln.color}"></i><i style="flex:1;background:${BASE_COLOR};opacity:.45"></i></div>` : ''}`}
-      <dl class="kv">${kvRow('Remote', ln.upstream ? esc(ln.upstream) + (ln.track ? ` <i style="color:var(--muted)">(${esc(ln.track)})</i>` : '') : '<span style="color:var(--muted)">none (local only)</span>')}${ln.commits.length ? kvRow('Updated', ago(ln.commits[0].ct)) : ''}${ln.pr ? kvRow('PR', `<a class="link" data-key="pr:${esc(ln.name)}">#${ln.pr.number}</a> <span class="pill" style="background:${(PRS[prState(ln.pr)] || PRS.OPEN)[1]};color:${(PRS[prState(ln.pr)] || PRS.OPEN)[0]}">${(PRS[prState(ln.pr)] || PRS.OPEN)[2]}</span>`) : ''}</dl>
+      <dl class="kv">${forkRow}${kvRow('Remote', ln.upstream ? esc(ln.upstream) + (ln.track ? ` <i style="color:var(--muted)">(${esc(ln.track)})</i>` : '') : '<span style="color:var(--muted)">none (local only)</span>')}${ln.commits.length ? kvRow('Updated', ago(ln.commits[0].ct)) : ''}${ln.pr ? kvRow('PR', `<a class="link" data-key="pr:${esc(ln.name)}">#${ln.pr.number}</a> <span class="pill" style="background:${(PRS[prState(ln.pr)] || PRS.OPEN)[1]};color:${(PRS[prState(ln.pr)] || PRS.OPEN)[0]}">${(PRS[prState(ln.pr)] || PRS.OPEN)[2]}</span>`) : ''}</dl>
       ${why}${stale}${conflictCallout(ln, false)}${checksSection(ln.ci)}${filesHtml}${cmds}`;
   }
   s.innerHTML = band + `<div class="body">${body}</div>`; s.classList.add('open'); document.body.classList.add('side'); s.scrollTop = 0;
@@ -752,6 +773,11 @@ function ciFromGraphql(roll) {
 }
 const mapC = c => { const iso = (c.commit.committer && c.commit.committer.date) || c.commit.author.date; return { hash: c.sha, short: c.sha.slice(0, 7), msg: (c.commit.message || '').split('\n')[0], author: (c.commit.author && c.commit.author.name) || (c.author && c.author.login) || '?', date: iso.slice(0, 10), ct: Math.floor(Date.parse(iso) / 1000), parents: c.parents.map(p => p.sha), unpushed: false }; };
 const walk = (nodes, tip) => { const out = []; let h = tip; while (h && nodes[h] && out.length < 1000) { out.push(nodes[h]); h = nodes[h].parents[0]; } return out; };  // first-parent chain
+const attachNodes = (mb, chain, nodes) => {  // oldest main-line commit that contains mb (mb itself when it is on the line); walks side parents
+  if (!mb) return null; if (chain.some(c => c.hash === mb)) return mb;
+  for (let i = chain.length - 1; i >= 0; i--) { const seen = new Set(), st = [chain[i].hash]; while (st.length) { const x = st.pop(); if (x === mb) return chain[i].hash; if (seen.has(x) || !nodes[x]) continue; seen.add(x); st.push(...nodes[x].parents); } }
+  return null;
+};
 const encRef = s => s.split('/').map(encodeURIComponent).join('/');
 
 async function buildGraph(x, max) {
@@ -760,15 +786,15 @@ async function buildGraph(x, max) {
   for (const p of prRaw) if (!(p.head.repo && p.head.repo.full_name !== info.full_name) && !prs[p.head.ref])
     prs[p.head.ref] = { number: p.number, state: p.merged_at ? 'MERGED' : p.state.toUpperCase(), title: p.title, url: p.html_url, draft: !!p.draft, mergeable: null, review: null, author: p.user && p.user.login, created: p.created_at, base: p.base.ref };
   // which branches (most recently updated first) + CI. GraphQL needs a token; without one, PR branches first, then the rest.
-  let names, total, ciBy = {}, gq = null;
+  let names, total, ciBy = {}, gq = null; const tipOf = {};
   if (hasTok) { try { gq = await ghGql(GQL_LIST, { o, n, b: Math.min(100, max + 2), base }); } catch (e) { noRate(e); } }
-  if (gq) { names = gq.refs.nodes.map(r => r.name); total = gq.refs.totalCount; gq.refs.nodes.forEach(r => ciBy[r.name] = ciFromGraphql(r.target.statusCheckRollup)); ciBy[base] = ciFromGraphql(gq.base && gq.base.target.statusCheckRollup); }
-  else { const brs = await ghReq(`${R}/branches?per_page=100`), have = new Set(brs.map(b => b.name)); names = [...Object.keys(prs).filter(k => have.has(k)), ...brs.map(b => b.name).filter(k => !prs[k])]; total = brs.length; }
+  if (gq) { names = gq.refs.nodes.map(r => r.name); total = gq.refs.totalCount; gq.refs.nodes.forEach(r => { ciBy[r.name] = ciFromGraphql(r.target.statusCheckRollup); tipOf[r.name] = r.target.oid; }); ciBy[base] = ciFromGraphql(gq.base && gq.base.target.statusCheckRollup); }
+  else { const brs = await ghReq(`${R}/branches?per_page=100`), have = new Set(brs.map(b => b.name)); brs.forEach(b => tipOf[b.name] = b.commit && b.commit.sha); names = [...Object.keys(prs).filter(k => have.has(k)), ...brs.map(b => b.name).filter(k => !prs[k])]; total = brs.length; }
   names = [...new Set(names)].filter(k => k !== base).slice(0, max);
   const skipped = Math.max(0, total - 1 - max);
   const hist = await ghReq(`${R}/commits?sha=${encodeURIComponent(base)}&per_page=100`), baseNodes = {};
   hist.forEach(c => { const m = mapC(c); baseNodes[m.hash] = m; });
-  const bchain = hist.length ? walk(baseNodes, hist[0].sha) : [];
+  let bchain = hist.length ? walk(baseNodes, hist[0].sha) : [], fullPage = hist.length >= 100;
   const cmps = await pool(names, 6, async name => {  // one call gives: commits since the fork, ahead/behind, fork point, changed files
     try {
       const url = `${R}/compare/${encRef(base)}...${encRef(name)}`; let c = await ghReq(url + '?per_page=100');
@@ -776,13 +802,21 @@ async function buildGraph(x, max) {
       return c;
     } catch (e) { noRate(e); return null; }
   });
-  const lanes = [{ name: base, is_base: true, mb: null, ahead: 0, behind: 0, more: hist.length >= 100 ? -1 : 0, upstream: 'GitHub', track: '', conflict: null, ci: ciBy[base] || null, pr: prs[base] || null, commits: bchain }];
+  const lanes = [{ name: base, is_base: true, mb: null, ahead: 0, behind: 0, more: -1, upstream: 'GitHub', track: '', conflict: null, ci: ciBy[base] || null, pr: prs[base] || null, commits: bchain }];
   names.forEach((name, i) => {
     const c = cmps[i]; if (!c) return;
     const nodes = {}; (c.commits || []).forEach(k => { const m = mapC(k); nodes[m.hash] = m; });
     const cs = c.commits && c.commits.length ? walk(nodes, c.commits[c.commits.length - 1].sha) : [];
-    lanes.push({ name, is_base: false, mb: (c.merge_base_commit || {}).sha || null, ahead: c.ahead_by, behind: c.behind_by, more: Math.max(0, c.ahead_by - (c.commits || []).length), upstream: 'GitHub', track: '', conflict: null, ci: ciBy[name] || null, pr: prs[name] || null, commits: cs, _files: (c.files || []).map(f => f.filename) });
+    lanes.push({ name, is_base: false, tip: tipOf[name] || null, mb: (c.merge_base_commit || {}).sha || null, ahead: c.ahead_by, behind: c.behind_by, more: Math.max(0, c.ahead_by - (c.commits || []).length), upstream: 'GitHub', track: '', conflict: null, ci: ciBy[name] || null, pr: prs[name] || null, commits: cs, _files: (c.files || []).map(f => f.filename) });
   });
+  // main history is limited to the newest 100 commits; if some fork point is older, page further back (up to 300) so those branches can connect
+  const unplaced = () => lanes.some(l => !l.is_base && l.mb && !attachNodes(l.mb, bchain, baseNodes));
+  for (let page = 2; page <= 3 && fullPage && unplaced(); page++) {
+    const more = await ghReq(`${R}/commits?sha=${encodeURIComponent(base)}&per_page=100&page=${page}`).catch(e => { noRate(e); return []; });
+    more.forEach(c => { const m = mapC(c); baseNodes[m.hash] = m; hist.push(c); }); fullPage = more.length >= 100; bchain = walk(baseNodes, hist[0].sha);
+  }
+  lanes[0].commits = bchain; lanes[0].more = fullPage ? -1 : 0;
+  for (const l of lanes) if (!l.is_base) l.mb_main = attachNodes(l.mb, bchain, baseNodes);
   // conflicts: GitHub's own verdict for open PRs, otherwise files changed on BOTH sides of the fork
   await pool(lanes.filter(l => !l.is_base && l.pr && l.pr.state === 'OPEN' && l.ahead).slice(0, 8), 6, async l => {
     try { const p = await ghReq(`${R}/pulls/${l.pr.number}`); l.pr.mergeable = p.mergeable === true ? 'MERGEABLE' : p.mergeable === false ? 'CONFLICTING' : null; } catch (e) { noRate(e); }

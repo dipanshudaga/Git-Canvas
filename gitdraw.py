@@ -66,6 +66,45 @@ def commits_of(repo, ref, exclude=None, limit=None):
         recs.append(dict(hash=h, short=s, msg=subj, author=an, date=d, ct=int(ct), parents=par.split()))
     return recs
 
+def attach_local(repo, base_ref, mb, hs):
+    """where a branch plugs into the main line: its fork point when that is on the line, else the oldest main-line commit that contains it
+    (a branch started from another branch that was merged into main later has a fork point that is not on the line itself).
+    hs = main's first-parent chain, newest first. "contains mb" is true for a newest-first prefix of it, so binary-search the boundary."""
+    if not mb:
+        return None
+    if mb in hs:
+        return mb
+    def has(i):
+        return subprocess.run(["git", "-C", repo, "merge-base", "--is-ancestor", mb, hs[i]], capture_output=True).returncode == 0
+    if not hs or not has(0):
+        return None
+    lo, hi = 0, len(hs) - 1  # largest i (= oldest commit) that still contains mb
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if has(mid):
+            lo = mid
+        else:
+            hi = mid - 1
+    return hs[lo]
+
+def attach_nodes(mb, chain, nodes):
+    """same as attach_local, for GitHub data: walk side parents of the fetched commits, oldest main-line commit first."""
+    if not mb:
+        return None
+    hs = [c["hash"] for c in chain]
+    if mb in hs:
+        return mb
+    for h in reversed(hs):
+        seen, stack = set(), [h]
+        while stack:
+            x = stack.pop()
+            if x == mb:
+                return h
+            if x in seen or x not in nodes:
+                continue
+            seen.add(x); stack.extend(nodes[x]["parents"])
+    return None
+
 def pull_prs(repo):
     try:
         r = subprocess.run(["gh", "pr", "list", "--state", "all", "--limit", "100", "--json",
@@ -110,7 +149,7 @@ def collect(repo, base, only, limit, full=False, cap=500, max_branches=8):
         if not cs:  # fully merged: still show its last few commits so the merge edge has a target
             cs = [c for c in commits_of(repo, n, limit=4) if c["hash"] not in hs][:3]
         hidden[n] = max(0, len(cs) - lim)
-        lanes.append(dict(name=n, is_base=False, commits=cs[:lim], info=branches[n], pr=None, mb=mbs[n]))
+        lanes.append(dict(name=n, is_base=False, commits=cs[:lim], info=branches[n], pr=None, mb=mbs[n], mb_main=attach_local(repo, base_ref, mbs[n], hs)))
     lanes[0]["skipped"] = skipped
     prs = pull_prs(repo)
     for ln in lanes:
@@ -249,6 +288,7 @@ def lanes_github(raw, limit, full, cap, max_branches=8):
                 mb = c["hash"]; break
             cs.append(c)
         rc = b.get("rest") or {"ahead": len(cs), "behind": 0}
+        mb = mb or (b.get("rest") or {}).get("mb")  # forked from a commit that is not on the main line: take GitHub's own merge-base
         br.append((b, cs, mb, rc["ahead"], rc["behind"]))
     cut = max([hs.index(m) for _, _, m, _, _ in br if m in hs] + [min(len(hs), 6) - 1]) + 1
     base_commits = bchain[:cap] if full else bchain[:max(cut, 1)]
@@ -264,7 +304,7 @@ def lanes_github(raw, limit, full, cap, max_branches=8):
                   hidden=len(bchain) - len(base_commits) + (0 if bchain and not bchain[-1]["parents"] else max(0, bh["totalCount"] - len(bchain))),
                   skipped=skipped)]
     for b, cs, mb, ahead, behind in br:
-        lanes.append(dict(name=b["name"], is_base=False, commits=cs[:lim], info=info(b["name"], b["target"]["oid"]), pr=prs.get(b["name"]), mb=mb,
+        lanes.append(dict(name=b["name"], is_base=False, commits=cs[:lim], info=info(b["name"], b["target"]["oid"]), pr=prs.get(b["name"]), mb=mb, mb_main=attach_nodes(mb, bchain, nodes),
                           unpushed=set(), ahead=ahead, behind=behind, hidden=max(0, max(ahead, len(cs)) - len(cs[:lim]))))
     return base, lanes
 
@@ -716,7 +756,7 @@ def graph(a, x):
     for ln, cf in zip(lanes, conf):
         info, pr = ln["info"], ln["pr"]
         out.append(dict(
-            name=ln["name"], is_base=ln["is_base"], mb=ln.get("mb"), ahead=ln.get("ahead", 0), behind=ln.get("behind", 0),
+            name=ln["name"], is_base=ln["is_base"], mb=ln.get("mb"), mb_main=ln.get("mb_main"), tip=info.get("tip"), ahead=ln.get("ahead", 0), behind=ln.get("behind", 0),
             more=ln["hidden"], upstream=info.get("upstream"), track=info.get("track", ""), conflict=cf, ci=ci_by.get(ln["name"]),
             pr=dict(number=pr["number"], state=pr["state"], title=pr["title"], url=pr.get("url"), draft=bool(pr.get("isDraft")), mergeable=pr.get("mergeable"),
                     review=pr.get("reviewDecision"), author=pr.get("author"), created=pr.get("createdAt"), base=pr.get("baseRefName")) if pr else None,
