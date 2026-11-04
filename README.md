@@ -23,7 +23,9 @@ Limits: the newest 10 to 100 branches (you choose), up to 100 commits per branch
 
 ```bash
 gh auth login                      # only for GitHub repos
-python3 gitdraw.py --serve --repo .
+npm run dev                        # same as: python3 gitdraw.py --serve --repo .
 ```
+
+There are no npm dependencies; `npm run dev` just starts the Python server (needs Python 3). `npm run dev:static` serves the page on <http://localhost:8080> exactly as GitHub Pages would (GitHub repos only, optional token).
 
 Open <http://127.0.0.1:8765>. Local mode uses your `gh` login (no token to paste) and exact conflict detection (`git merge-tree`, needs Git 2.38+).
