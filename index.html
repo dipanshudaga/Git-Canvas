@@ -14,7 +14,7 @@
   :root {
     /* color */
     --bg:#f6f6f3; --panel:#fff; --ink:#16161d; --ink-2:#475467; --muted:#667085; --faint:#98a2b3; --line:#e6e7eb; --fill:#f1f2f5; --fill-2:#e5e8ee;
-    --accent:#4262ff; --accent-2:#3350e0; --accent-bg:#eef1ff;
+    --accent:#4f46e5; --accent-2:#4338ca; --accent-bg:#eef2ff;
     --ok:#15803d; --okbg:#dcfce7; --bad:#cf222e; --badbg:#ffe4e6; --warn:#b45309; --warnbg:#fef3c7;
     /* spacing: 4pt steps on an 8pt grid */
     --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
@@ -93,7 +93,7 @@
 
   .card { position:absolute; width:256px; height:128px; border-radius:var(--r2); padding:var(--s3); border:2px solid; cursor:grab; user-select:none; box-shadow:var(--e1); transition:box-shadow .12s }
   .card:hover { box-shadow:var(--e3) }
-  .card.sel,.pr.sel,.head.sel { box-shadow:0 0 0 4px rgba(66,98,255,.5), var(--e3) }
+  .card.sel,.pr.sel,.head.sel { box-shadow:0 0 0 4px rgba(79,70,229,.5), var(--e3) }
   .card.unpushed { border-style:dashed } .card.merge { border-width:3px }
   .card .r1 { display:flex; justify-content:space-between; align-items:center; height:16px; font:var(--t-caption); color:var(--ink-2) }
   .card .r1 > span:last-child { display:inline-flex; align-items:center; gap:var(--s2) }
@@ -259,9 +259,9 @@ const toast = t => { const n = $('toast'); n.textContent = t; n.style.display = 
 const CW = 256, CH = 128, PRH = 120, HEAD_H = 128, COLX = 320, ROWY = 160, GAP = 24, START = 6, UNIT = 8;
 const snap = v => Math.round(v / UNIT) * UNIT;
 const BASE_COLOR = '#15803d';
-const hsl = (h, sat, l) => { sat /= 100; l /= 100; const k = n => (n + h / 30) % 12, a = sat * Math.min(l, 1 - l), f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))); return '#' + [f(0), f(8), f(4)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join(''); };
-// one hue for every branch (blue), told apart by shade; green is reserved for the main line, red/amber/green only mean conflict/warning/ok
-const COLORS = [[222, 60, 26], [222, 72, 38], [222, 80, 50], [216, 50, 34], [228, 66, 44], [220, 76, 46]].map(c => hsl(...c));
+// Branch colors: one tonal step (Tailwind "700") across eight hues, so they read as a family. Green is reserved for the main line;
+// red / amber / green are reserved for conflict / warning / OK, so none of these sit in those hues.
+const COLORS = ['#6d28d9', '#c2410c', '#0e7490', '#be185d', '#0f766e', '#a21caf', '#475569', '#0369a1'];  // violet, orange, cyan, pink, teal, fuchsia, slate, sky
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const fmtDate = s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? `${m[3]} ${MON[+m[2] - 1]} '${m[1].slice(2)}` : (s || ''); };
 const tint = (hex, a = .14) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };

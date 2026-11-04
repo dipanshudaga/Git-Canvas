@@ -29,7 +29,7 @@ Never set `font-size` or `font-weight` directly; use `font: var(--t-...)`.
 ## Radius, elevation, color
 - Radius: `--r1` 8 (rows, inner buttons) · `--r2` 12 (controls, cards, callouts) · `--r3` 16 (panels, bars, branch titles) · `--pill`.
 - Elevation: `--e1` cards · `--e2` floating panels · `--e3` hover / drag.
-- Color: green is the main line, **one blue hue in shades** is every other branch. Red / amber / green only ever mean conflict / warning / OK. Everything else is neutral (`--ink`, `--ink-2`, `--muted`, `--faint`, `--line`, `--fill`).
+- Color: the main line is green (`#15803d`). Every other branch gets its own hue from one **tonal step (Tailwind 700)** so they read as a family: violet `#6d28d9`, orange `#c2410c`, cyan `#0e7490`, pink `#be185d`, teal `#0f766e`, fuchsia `#a21caf`, slate `#475569`, sky `#0369a1` (white text is at least 5:1 on all). Card backgrounds are a 14% tint of the same color. Red / amber / green are reserved for conflict / warning / OK, and the UI accent is indigo `#4f46e5`. Everything else is neutral (`--ink`, `--ink-2`, `--muted`, `--faint`, `--line`, `--fill`).
 
 ## Icons
 One stroke set (Lucide-style, 24px grid, 2px stroke, round caps) in an inline SVG sprite. Use `ico('name')` in JS or `<svg class="i"><use href="#i-name"/></svg>` in HTML. Sizes: `.xs` 12 (inside chips) · default 16 (buttons, rows) · `.lg` 20 (icon-only buttons). Colour comes from `currentColor`. No emoji or text glyphs as icons.
