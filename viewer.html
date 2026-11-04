@@ -3,379 +3,419 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>gitdraw canvas</title>
+<title>Git Canvas</title>
 <style>
-  :root { --bg:#f5f6f8; --ink:#111827; --muted:#6b7280; --panel:#fff; --line:#e5e7eb; --accent:#4f46e5;
-          --shadow:0 0 0 1px rgba(16,24,40,.06), 0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.08);
-          --font:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif; --mono:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  :root { --bg:#f7f7f5; --ink:#1c1c28; --muted:#6b7280; --panel:#fff; --line:#e4e4e7; --accent:#4262ff;
+          --shadow:0 1px 2px rgba(20,20,40,.08), 0 4px 16px rgba(20,20,40,.10);
+          --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace }
   * { box-sizing:border-box }
-  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink); overflow:hidden; font:13px/1.4 var(--font);
-              -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale }
-  #bar { position:fixed; top:14px; left:14px; z-index:3; display:flex; gap:4px; align-items:center; background:var(--panel);
-         border-radius:16px; padding:6px; box-shadow:var(--shadow); max-width:calc(100% - 28px); flex-wrap:wrap }
-  #bar .sep { width:1px; height:20px; background:var(--line); margin:0 4px }
-  button, select, input { font:inherit; color:inherit }
-  button, select { background:transparent; border:0; border-radius:10px; padding:7px 11px; cursor:pointer; font-weight:500;
-                   transition:background-color .12s ease-out, transform .12s ease-out }
-  button:hover, select:hover { background:#f0f1f4 }
-  button:active { transform:scale(.96) }
-  button:focus-visible, select:focus-visible, input:focus-visible { outline:2px solid var(--accent); outline-offset:1px }
-  button.primary { background:var(--accent); color:#fff } button.primary:hover { background:#4338ca }
-  button:disabled { opacity:.55; cursor:progress }
-  select { max-width:230px; padding-right:6px }
-  #status { color:var(--muted); padding:0 10px 0 6px; font-size:12px; font-variant-numeric:tabular-nums }
-  #pop { position:fixed; top:68px; left:14px; z-index:3; width:400px; background:var(--panel); border-radius:18px;
-         box-shadow:var(--shadow); padding:16px; display:none }
+  html,body { margin:0; height:100%; overflow:hidden; background:var(--bg); color:var(--ink); font:13px/1.4 var(--font); -webkit-font-smoothing:antialiased }
+  button,select,input { font:inherit; color:inherit }
+  button { cursor:pointer; border:0; background:transparent }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:1px }
+
+  /* floating chrome, Miro-style */
+  .float { position:fixed; z-index:5; background:var(--panel); border-radius:12px; box-shadow:var(--shadow) }
+  #top { top:12px; left:12px; display:flex; align-items:center; gap:2px; padding:5px 6px }
+  #top .logo { font-weight:700; padding:0 8px 0 6px; letter-spacing:-.01em }
+  #top select { border:0; background:transparent; font-weight:600; padding:6px 4px; max-width:240px; cursor:pointer; border-radius:8px }
+  .tb { padding:7px 10px; border-radius:8px; font-weight:500; white-space:nowrap }
+  .tb:hover { background:#f1f1f4 } .tb:disabled { opacity:.5; cursor:progress }
+  .tb.primary { background:var(--accent); color:#fff } .tb.primary:hover { background:#3350e0 }
+  .sep { width:1px; height:20px; background:var(--line); margin:0 4px }
+  #status { color:var(--muted); font-size:12px; padding:0 8px; white-space:nowrap }
+  #tools { top:50%; left:12px; transform:translateY(-50%); display:flex; flex-direction:column; padding:5px; gap:2px }
+  #tools button { width:38px; height:38px; border-radius:8px; font-size:16px; display:grid; place-items:center }
+  #tools button:hover { background:#f1f1f4 } #tools button.on { background:#e8ecff; color:var(--accent) }
+  #zoom { right:12px; bottom:12px; display:flex; align-items:center; padding:4px }
+  #zoom button { width:30px; height:30px; border-radius:8px; font-size:16px } #zoom button:hover { background:#f1f1f4 }
+  #zl { min-width:48px; text-align:center; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums }
+
+  #viewport { position:fixed; inset:0; cursor:grab; touch-action:none; overflow:hidden }
+  #viewport.drag { cursor:grabbing }
+  #world { position:absolute; left:0; top:0; transform-origin:0 0 }
+  #edges { position:absolute; left:0; top:0; overflow:visible; pointer-events:none }
+
+  /* lane header (like a Miro frame title) */
+  .lane-head { position:absolute; width:228px; border-radius:12px; padding:10px 12px; color:#fff; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.15) }
+  .lane-head:hover { filter:brightness(1.06) }
+  .lane-head .n { font-weight:700; font-size:15px; display:flex; gap:6px; align-items:center; overflow:hidden }
+  .lane-head .n span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+  .lane-head .sub { font-size:11.5px; opacity:.92; margin-top:3px; display:flex; gap:6px; flex-wrap:wrap }
+  .chip { background:rgba(255,255,255,.25); border-radius:20px; padding:1px 8px; font-weight:600; font-size:11px }
+  .chip.pr { background:#fff; color:#333 }
+  .lane-line { position:absolute; width:3px; border-radius:2px; opacity:.22 }
+
+  /* commit card (like a Miro sticky) */
+  .card { position:absolute; width:208px; height:92px; border-radius:10px; padding:9px 11px; border:1.5px solid; cursor:pointer;
+          box-shadow:0 1px 2px rgba(0,0,0,.08); transition:box-shadow .12s, transform .12s; overflow:hidden }
+  .card:hover { box-shadow:0 6px 16px rgba(0,0,0,.16); transform:translateY(-1px) }
+  .card.sel { box-shadow:0 0 0 3px var(--accent), 0 6px 16px rgba(0,0,0,.16) }
+  .card.unpushed { border-style:dashed }
+  .card .r1 { display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#555 }
+  .card .h { font-family:var(--mono); font-weight:700; font-size:11px }
+  .card .m { margin-top:4px; font-weight:600; font-size:12.5px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-word }
+  .card .a { position:absolute; left:11px; right:11px; bottom:8px; font-size:11px; color:#555; display:flex; align-items:center; gap:5px; overflow:hidden; white-space:nowrap }
+  .card .a b { font-weight:500; overflow:hidden; text-overflow:ellipsis }
+  .av { width:14px; height:14px; border-radius:50%; color:#fff; font-size:7px; font-weight:700; display:grid; place-items:center; flex:none }
+  .tag { margin-left:auto; flex:none; font-size:9.5px; font-weight:700; border-radius:10px; padding:1px 7px; background:#fff; letter-spacing:.02em }
+  .card.merge { border-width:2.5px }
+  .card.fresh::after { content:"NEW"; position:absolute; top:0; right:0; background:#16a34a; color:#fff; font-size:9px; font-weight:800; padding:2px 7px; border-bottom-left-radius:8px }
+
+  /* expand / collapse chip under a lane */
+  .more { position:absolute; width:208px; height:34px; border-radius:17px; border:1.5px dashed; background:#fff; font-weight:600; font-size:12px; display:grid; place-items:center; cursor:pointer }
+  .more:hover { background:#f4f4f6 }
+  .more.note { cursor:default; color:var(--muted); border-color:#c9c9d1; font-weight:500; font-size:11.5px; text-align:center; line-height:1.2; padding:0 8px }
+  .more.note:hover { background:#fff }
+
+  /* detail panel */
+  #side { top:12px; right:12px; bottom:56px; width:330px; padding:18px 18px 14px; overflow:auto; display:none }
+  #side.open { display:block }
+  #side h2 { margin:0 0 2px; font-size:15px; line-height:1.3; word-break:break-word }
+  #side .x { position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:8px; color:var(--muted) } #side .x:hover { background:#f1f1f4 }
+  #side .kv { margin:12px 0 0; display:grid; grid-template-columns:76px 1fr; gap:6px 8px; font-size:12.5px }
+  #side .kv dt { color:var(--muted) } #side .kv dd { margin:0; word-break:break-word }
+  #side .why { margin-top:14px; padding:11px 12px; border-radius:10px; background:#f5f6ff; font-size:12.5px; line-height:1.5 }
+  #side .why b { font-weight:650 }
+  #side .bar { height:8px; border-radius:4px; background:#eee; margin:8px 0 2px; display:flex; overflow:hidden }
+  .pill { display:inline-block; font-size:11px; font-weight:700; border-radius:10px; padding:1px 8px }
+
+  /* popovers */
+  #pop { top:58px; left:12px; width:400px; padding:16px; display:none }
   #pop.open { display:block } #pop h3 { margin:0 0 10px; font-size:14px }
-  #pop .row { display:flex; gap:8px } #pop input { flex:1; border:0; border-radius:10px; padding:9px 11px; outline:none; box-shadow:0 0 0 1px var(--line) inset }
+  #pop .row { display:flex; gap:8px }
+  #pop input { flex:1; border:0; border-radius:8px; padding:9px 11px; outline:none; box-shadow:0 0 0 1px var(--line) inset }
   #pop input:focus { box-shadow:0 0 0 2px var(--accent) inset }
-  #sug { margin-top:8px; border-radius:12px; max-height:220px; overflow:auto; display:none; box-shadow:0 0 0 1px var(--line) inset; padding:4px }
-  #sug.open { display:block } #sug div { padding:6px 8px; border-radius:8px; cursor:pointer; display:flex; gap:8px; align-items:center; font-size:12.5px }
-  #sug div.on, #sug div:hover { background:#eef2ff } #sug i { font-style:normal; margin-left:auto; font-size:10px; font-weight:700; color:#15803d; background:#dcfce7; border-radius:8px; padding:1px 7px }
-  #pop p { margin:10px 0 0; color:var(--muted); font-size:12px; text-wrap:pretty } #pop p.err { color:#dc2626 }
-  #zoom { position:fixed; right:14px; bottom:14px; z-index:3; display:flex; align-items:center; background:var(--panel); border-radius:14px; box-shadow:var(--shadow); padding:4px }
-  #zoom button { padding:5px 10px } #zl { min-width:46px; text-align:center; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums }
-  #hint { position:fixed; left:14px; bottom:14px; z-index:3; color:var(--muted); font-size:12px; background:rgba(255,255,255,.8); backdrop-filter:blur(6px); padding:6px 10px; border-radius:10px }
-  @media (max-width:1100px) { #hint { display:none } }
-  #cv { width:100%; height:100%; display:block; cursor:grab; touch-action:none; user-select:none } #cv.drag { cursor:grabbing }
-  svg text { user-select:none; -webkit-user-select:none; pointer-events:none; font-family:var(--font) }
-  .sheet { fill:#fff; filter:url(#sheetShadow) }
-  .node { cursor:grab } .node.lift { cursor:grabbing }
-  .node .card { filter:url(#nodeShadow) } .node:hover .card { filter:url(#nodeShadowHover) } .node.lift .card { filter:url(#nodeLift) }
-  .btn { cursor:pointer } .btn rect { fill:#fff; stroke:var(--line) } .btn:hover rect { fill:#f3f4f6 } .btn text { font-size:12px; font-weight:600; fill:var(--ink) }
-  .mono { font-family:var(--mono) }
+  #pop p { margin:10px 0 0; color:var(--muted); font-size:12px } #pop p.err { color:#dc2626 }
+  #sug { margin-top:8px; border-radius:10px; max-height:200px; overflow:auto; display:none; box-shadow:0 0 0 1px var(--line) inset; padding:4px }
+  #sug.open { display:block } #sug div { padding:6px 8px; border-radius:6px; cursor:pointer; display:flex; gap:8px; font-size:12.5px }
+  #sug div.on,#sug div:hover { background:#eef1ff } #sug i { font-style:normal; margin-left:auto; font-size:10px; font-weight:700; color:#15803d; background:#dcfce7; border-radius:8px; padding:1px 7px }
+  #help { left:62px; bottom:12px; padding:14px 16px; width:330px; display:none; font-size:12.5px; line-height:1.5 }
+  #help.open { display:block } #help h3 { margin:0 0 8px; font-size:13px }
+  #help li { margin:4px 0 } #help ul { margin:0; padding-left:18px }
+  .sw { display:inline-block; width:18px; height:0; border-top:3px solid; vertical-align:middle; margin-right:6px } .sw.d { border-top-style:dashed }
+  #empty { position:fixed; inset:0; display:none; place-items:center; color:var(--muted); pointer-events:none; text-align:center }
 </style>
 </head>
 <body>
-<div id="bar">
-  <select id="repo" title="Repository" aria-label="Repository"></select>
-  <button id="rmBtn" title="Remove this repo from the list" aria-label="Remove repo" style="padding:7px 9px">✕</button>
-  <button id="addBtn">+ Add repo</button>
+<div id="viewport"><div id="world"><svg id="edges"></svg></div></div>
+<div id="empty"><div id="emptyMsg"></div></div>
+
+<div id="top" class="float">
+  <span class="logo">◈ Git Canvas</span>
+  <select id="repo" aria-label="Repository"></select>
+  <button class="tb" id="rmBtn" title="Remove this repo from the list">✕</button>
+  <button class="tb" id="addBtn">+ Add repo</button>
   <span class="sep"></span>
-  <button class="primary" id="reload">Reload</button>
-  <button id="fitNew">Latest</button>
-  <button id="fitAll">Fit all</button>
+  <button class="tb primary" id="reload" title="Re-read the repo and mark what's new">⟳ Reload</button>
+  <button class="tb" id="expAll">Expand all</button>
   <span id="status" role="status">loading…</span>
 </div>
-<div id="pop">
-  <h3>Add a repository</h3>
-  <div class="row"><input id="src" placeholder="owner/repo, github.com URL, or local folder" spellcheck="false" autocomplete="off"><button class="primary" id="addGo">Add</button></div>
-  <div id="sug"></div>
-  <p id="popmsg">Paste a GitHub URL or <code>owner/repo</code> — it is read through the GitHub API with your <code>gh</code> login, nothing is cloned. For a local folder, start typing a path (<code>/</code> or <code>~</code>) and pick from the suggestions.</p>
-</div>
-<div id="hint">Drag cards to rearrange · drag the canvas or scroll to pan · pinch or ⌘/Ctrl + scroll to zoom</div>
-<svg id="cv" xmlns="http://www.w3.org/2000/svg">
-  <defs id="defs">
-    <filter id="sheetShadow" x="-5%" y="-5%" width="110%" height="110%"><feDropShadow dx="0" dy="6" stdDeviation="14" flood-color="#101828" flood-opacity=".08"/><feDropShadow dx="0" dy="0" stdDeviation=".5" flood-color="#101828" flood-opacity=".18"/></filter>
-    <filter id="nodeShadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#101828" flood-opacity=".08"/><feDropShadow dx="0" dy="0" stdDeviation=".4" flood-color="#101828" flood-opacity=".22"/></filter>
-    <filter id="nodeShadowHover" x="-10%" y="-10%" width="120%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#101828" flood-opacity=".12"/><feDropShadow dx="0" dy="0" stdDeviation=".4" flood-color="#101828" flood-opacity=".28"/></filter>
-    <filter id="nodeLift" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#101828" flood-opacity=".2"/><feDropShadow dx="0" dy="0" stdDeviation=".4" flood-color="#101828" flood-opacity=".3"/></filter>
-    <filter id="newGlow" x="-25%" y="-25%" width="150%" height="170%"><feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#16a34a" flood-opacity=".5"/></filter>
-  </defs>
-  <g id="world"></g>
-</svg>
-<div id="zoom"><button id="zo" aria-label="Zoom out">−</button><span id="zl">100%</span><button id="zi" aria-label="Zoom in">+</button></div>
-<script>
-const NS = 'http://www.w3.org/2000/svg', GAP = 200, PAD = 44;
-const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif', MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
-const $ = id => document.getElementById(id), cv = $('cv'), world = $('world'), defs = $('defs');
-const status = t => $('status').textContent = t;
-const store = { get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
-                set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
-let view = { x: 40, y: 20, k: 1 }, layout = [], data = null, repos = [], cur = store.get('gd-repo', null);
-let expanded = new Set(store.get('gd-exp', [])), POS = store.get('gd-pos', {});
 
-const el = (tag, attrs = {}, parent) => {
-  const n = document.createElementNS(NS, tag);
-  for (const k in attrs) n.setAttribute(k, attrs[k]);
-  parent && parent.appendChild(n); return n;
-};
-const txt = (parent, s, attrs) => { const t = el('text', attrs, parent); t.textContent = s; return t; };
+<div id="pop" class="float">
+  <h3>Add a repository</h3>
+  <div class="row"><input id="src" placeholder="owner/repo, github.com URL, or local folder" spellcheck="false" autocomplete="off"><button class="tb primary" id="addGo">Add</button></div>
+  <div id="sug"></div>
+  <p id="popmsg">Paste a GitHub URL or <code>owner/repo</code> (read via the GitHub API with your <code>gh</code> login, nothing is cloned). For a local folder, start typing a path (<code>/</code> or <code>~</code>).</p>
+</div>
+
+<div id="tools" class="float">
+  <button id="tFit" title="Fit everything (F)">⤢</button>
+  <button id="tTop" title="Jump to newest commits (N)">⇡</button>
+  <button id="tHelp" title="How to read this (?)">?</button>
+</div>
+
+<div id="help" class="float">
+  <h3>How to read this board</h3>
+  <ul>
+    <li>Each <b>column is a branch</b>; the colored title card is the branch name. The green one is the main line.</li>
+    <li>Each <b>card is a commit</b> (a saved snapshot of the code). <b>Newer is higher</b>, older is lower.</li>
+    <li>A line joins a commit to the one it was built on.</li>
+    <li><span class="sw d"></span>dashed line: where a branch <b>split off</b> from main.</li>
+    <li><span class="sw"></span>solid line into main: a <b>merge</b>, the branch's work landing on main.</li>
+    <li>Dashed card border: committed here but not pushed to the remote yet.</li>
+    <li>Click any card or branch title for a plain-English explanation.</li>
+  </ul>
+</div>
+
+<aside id="side" class="float"></aside>
+
+<div id="zoom" class="float"><button id="zo" aria-label="Zoom out">−</button><span id="zl">100%</span><button id="zi" aria-label="Zoom in">+</button></div>
+
+<script>
+const $ = id => document.getElementById(id), vp = $('viewport'), world = $('world'), edges = $('edges');
+const store = { get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
 const api = async (path, opts = {}) => {
   const r = await fetch(path, { ...opts, headers: { 'X-Gitdraw': '1', 'Content-Type': 'application/json' } });
-  const j = await r.json();
-  if (j.error) throw new Error(j.error);
-  return j;
+  const j = await r.json(); if (j.error) throw new Error(j.error); return j;
 };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-// ---- text measuring: the browser's own font metrics, so nothing ever spills out of a card ----
-const mctx = document.createElement('canvas').getContext('2d');
-const tw = (s, font) => { mctx.font = font; return mctx.measureText(s).width; };
-const fit1 = (s, font, max) => {
-  if (tw(s, font) <= max) return s;
-  while (s.length > 1 && tw(s + '…', font) > max) s = s.slice(0, -1);
-  return s.trimEnd() + '…';
-};
-const wrap = (s, font, max, lines) => {  // greedy word wrap, last line ellipsised
-  const words = s.split(/\s+/), out = [];
-  let line = '';
-  for (let i = 0; i < words.length; i++) {
-    const t = line ? line + ' ' + words[i] : words[i];
-    if (tw(t, font) <= max || !line) { line = t; continue; }
-    out.push(line); line = words[i];
-    if (out.length === lines - 1) { line = words.slice(i).join(' '); break; }
-  }
-  out.push(line);
-  return out.map(l => fit1(l, font, max));
-};
-const initials = n => (n.match(/\b\w/g) || ['?']).slice(0, 2).join('').toUpperCase();
+// ----- constants -----
+const CW = 208, CH = 92, COLX = 270, ROWY = 124, HEAD_W = 228, HEAD_H = 76, TOP = 0;
+const START = 6;  // commits shown per branch before it is collapsed
+const BASE_COLOR = '#16a34a';
+const COLORS = ['#4262ff', '#f97316', '#a855f7', '#ec4899', '#0ea5e9', '#eab308', '#ef4444', '#14b8a6', '#8b5cf6', '#84cc16'];
+const tint = (hex, a = .14) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
 const AV = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#ec4899'];
 const avColor = n => AV[[...n].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
-const PRC = { MERGED: ['#6d28d9', '#ede9fe'], OPEN: ['#15803d', '#dcfce7'], CLOSED: ['#b91c1c', '#fee2e2'] };
+const initials = n => (n.match(/\b\w/g) || ['?']).slice(0, 2).join('').toUpperCase();
 
-const applyView = () => {
-  world.setAttribute('transform', `translate(${view.x} ${view.y}) scale(${view.k})`);
-  const s = 22 * view.k, a = Math.max(0, Math.min(1, (view.k - 0.25) / 0.3)) * 0.1;  // very faint dots, fade out when zoomed far out
-  document.body.style.backgroundImage = `radial-gradient(rgba(17,24,39,${a}) 1px, transparent 1.3px)`;
-  document.body.style.backgroundSize = `${s}px ${s}px`;
-  document.body.style.backgroundPosition = `${view.x}px ${view.y}px`;
-  $('zl').textContent = Math.round(view.k * 100) + '%';
-};
-const bbox = els => {
-  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-  for (const e of els) {
-    const pts = e.type === 'arrow' ? e.points.map(p => [e.x + p[0], e.y + p[1]]) : [[e.x, e.y], [e.x + e.width, e.y + e.height]];
-    for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+// ----- state -----
+let view = { x: 120, y: 90, k: 1 }, data = null, repos = [], cur = store.get('gc-repo', null), L = null, selected = null;
+let expanded = new Set();  // lane names shown in full (per repo)
+const expKey = () => 'gc-exp-' + cur;
+
+// ----- layout: pure function of data + expanded set -----
+function layout() {
+  const lanes = data.lanes.map((ln, i) => ({ ...ln, i, color: ln.is_base ? BASE_COLOR : COLORS[(i - 1) % COLORS.length], x: i * COLX }));
+  // how many commits of each lane to show
+  const base = lanes[0], baseIdx = Object.fromEntries(base.commits.map((c, i) => [c.hash, i]));
+  for (const ln of lanes) {
+    const all = ln.commits;
+    let n = START;
+    if (ln.is_base) {  // keep the base visible down to the deepest fork point, so every branch has something to hang off
+      const forks = lanes.filter(l => !l.is_base && l.mb in baseIdx).map(l => baseIdx[l.mb] + 1);
+      n = Math.min(all.length, Math.max(START, Math.min(40, Math.max(0, ...forks))));
+    }
+    ln.open = expanded.has(ln.name);
+    ln.shown = ln.open ? all : all.slice(0, n);
+    ln.hiddenLocal = all.length - ln.shown.length;
   }
-  return { x0, y0, x1, y1 };
-};
-const marker = color => {
-  const id = 'm' + color.replace('#', '');
-  if (!document.getElementById(id)) {
-    const m = el('marker', { id, viewBox: '0 0 10 10', refX: 8.5, refY: 5, markerWidth: 8, markerHeight: 8, orient: 'auto-start-reverse' }, defs);
-    el('path', { d: 'M1 1L9 5L1 9', fill: 'none', stroke: color, 'stroke-width': 1.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, m);
+  // a commit belongs to the first lane that lists it (base wins)
+  const owner = {}, byHash = {};
+  for (const ln of lanes) for (const c of ln.shown) if (!owner[c.hash]) { owner[c.hash] = ln; byHash[c.hash] = c; }
+  // topological order, oldest first, then pack rows so parallel branches share rows
+  const order = [], seen = new Set();
+  const visit = h => { if (!(h in owner) || seen.has(h)) return; seen.add(h); byHash[h].parents.forEach(visit); order.push(h); };
+  Object.keys(owner).sort((a, b) => byHash[a].ct - byHash[b].ct).forEach(visit);
+  const row = {}, last = new Map(lanes.map(l => [l, -1]));
+  for (const h of order) { const ln = owner[h]; row[h] = Math.max(last.get(ln) + 1, ...byHash[h].parents.filter(p => p in row).map(p => row[p] + 1)); last.set(ln, row[h]); }
+  const maxRow = Math.max(0, ...Object.values(row));
+  const y0 = TOP + HEAD_H + 36;
+  const cards = [];
+  for (const ln of lanes) {
+    ln.cards = ln.shown.filter(c => owner[c.hash] === ln).map(c => ({ c, ln, x: ln.x + (HEAD_W - CW) / 2, y: y0 + (maxRow - row[c.hash]) * ROWY, w: CW, h: CH }));
+    cards.push(...ln.cards);
+    const lowest = ln.cards.reduce((m, k) => Math.max(m, k.y), y0 - ROWY);
+    ln.moreY = lowest + CH + 22;
+    ln.bottom = lowest + CH + ((ln.hiddenLocal || ln.more) ? 22 + 34 : 0);
   }
-  return `url(#${id})`;
-};
-// ---- edges: rounded orthogonal paths; the server's collision-free route until a card is moved ----
-const rounded = (p, r = 10) => {
+  const at = {}; cards.forEach(k => at[k.c.hash] = k);
+  // fork points per base commit
+  const forkOf = {};
+  for (const ln of lanes) if (!ln.is_base && ln.mb) (forkOf[ln.mb] ||= []).push(ln.name);
+  return { lanes, cards, at, forkOf, bottom: Math.max(...lanes.map(l => l.bottom)), right: lanes.length * COLX - (COLX - HEAD_W) };
+}
+
+// ----- drawing -----
+function draw() {
+  L = layout();
+  world.querySelectorAll('.lane-head,.lane-line,.card,.more').forEach(n => n.remove());
+  const frag = document.createDocumentFragment();
+  const mk = (cls, css, html, onclick) => { const d = document.createElement('div'); d.className = cls; d.style.cssText = css; if (html != null) d.innerHTML = html; if (onclick) d.onclick = e => { e.stopPropagation(); onclick(); }; frag.appendChild(d); return d; };
+  const fresh = new Set(data.fresh || []);
+  for (const ln of L.lanes) {
+    const cx = ln.x + HEAD_W / 2 - 1.5;
+    mk('lane-line', `left:${cx}px;top:${TOP + HEAD_H}px;height:${ln.bottom - TOP - HEAD_H}px;background:${ln.color}`);
+    const sub = ln.is_base ? '<span class="chip">main line</span>'
+      : ln.ahead === 0 ? '<span class="chip">fully merged ✓</span>'
+      : `<span class="chip">↑${ln.ahead} ahead</span>` + (ln.behind ? `<span class="chip">↓${ln.behind} behind</span>` : '');
+    const pr = ln.pr ? `<span class="chip pr">PR #${ln.pr.number} ${esc(ln.pr.state.toLowerCase())}</span>` : '';
+    mk('lane-head', `left:${ln.x}px;top:${TOP}px;background:${ln.color};height:${HEAD_H}px`,
+      `<div class="n">⑂ <span title="${esc(ln.name)}">${esc(ln.name)}</span></div><div class="sub">${sub}${pr}</div>`, () => select({ lane: ln }));
+  }
+  for (const k of L.cards) {
+    const c = k.c, ln = k.ln, merge = c.parents.length > 1, fork = k.ln.is_base && L.forkOf[c.hash], unp = c.unpushed && ln.upstream;
+    const tag = merge ? `<span class="tag" style="color:${ln.color}">MERGE</span>` : fork ? `<span class="tag" style="color:#c2410c" title="${esc(fork.join(', '))} last shared history with this branch here">SPLIT</span>` : '';
+    const d = mk(`card${unp ? ' unpushed' : ''}${merge ? ' merge' : ''}${fresh.has(c.hash) ? ' fresh' : ''}${selected && selected.hash === c.hash ? ' sel' : ''}`,
+      `left:${k.x}px;top:${k.y}px;background:linear-gradient(${tint(ln.color, merge ? .28 : .13)},${tint(ln.color, merge ? .28 : .13)}),#fff;border-color:${ln.color}`,
+      `<div class="r1"><span class="h" style="color:${ln.color}">${esc(c.short)}</span><span>${esc(c.date)}</span></div>
+       <div class="m">${esc(c.msg)}</div>
+       <div class="a"><span class="av" style="background:${avColor(c.author)}">${esc(initials(c.author))}</span><b>${esc(c.author)}</b>${tag}</div>`,
+      () => select({ card: k }));
+    d.dataset.hash = c.hash;
+  }
+  for (const ln of L.lanes) {
+    const x = ln.x + (HEAD_W - CW) / 2;
+    if (ln.hiddenLocal > 0) mk('more', `left:${x}px;top:${ln.moreY}px;border-color:${ln.color};color:${ln.color}`, `▾ Show ${ln.hiddenLocal} older commit${ln.hiddenLocal > 1 ? 's' : ''}`, () => toggleLane(ln.name));
+    else if (ln.open && ln.commits.length > START) mk('more', `left:${x}px;top:${ln.moreY}px;border-color:${ln.color};color:${ln.color}`, '▴ Collapse', () => toggleLane(ln.name));
+    if (!ln.hiddenLocal && ln.more > 0) mk('more note', `left:${x}px;top:${ln.open && ln.commits.length > START ? ln.moreY + 44 : ln.moreY}px`, `+${ln.more} even older not loaded${data.github ? ' (GitHub API limit)' : ''}`);
+  }
+  world.appendChild(frag);
+  drawEdges();
+  $('empty').style.display = 'none';
+}
+
+function rounded(p, r) {  // polyline with rounded corners
   let d = `M${p[0][0]} ${p[0][1]}`;
   for (let i = 1; i < p.length - 1; i++) {
     const [x0, y0] = p[i - 1], [x1, y1] = p[i], [x2, y2] = p[i + 1];
     const l1 = Math.hypot(x1 - x0, y1 - y0) || 1, l2 = Math.hypot(x2 - x1, y2 - y1) || 1, k = Math.min(r, l1 / 2, l2 / 2);
     d += ` L${x1 + (x0 - x1) * k / l1} ${y1 + (y0 - y1) * k / l1} Q${x1} ${y1} ${x1 + (x2 - x1) * k / l2} ${y1 + (y2 - y1) * k / l2}`;
   }
-  const L = p[p.length - 1]; return d + ` L${L[0]} ${L[1]}`;
+  return d + ` L${p[p.length - 1][0]} ${p[p.length - 1][1]}`;
+}
+function drawEdges() {
+  let out = '';
+  for (const k of L.cards) {
+    k.c.parents.forEach((p, idx) => {
+      const pk = L.at[p]; if (!pk) return;
+      const child = k, par = pk, sameLane = child.ln === par.ln;
+      if (sameLane) {  // straight vertical: child's bottom -> parent's top
+        const cx = child.x + CW / 2;
+        out += `<path d="M${cx} ${child.y + CH} L${cx} ${par.y}" stroke="${child.ln.color}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+        return;
+      }
+      // cross-lane: out of the side facing the other column, along the free gap between rows, into the other card's side
+      const right = par.x > child.x, ax = child.x + (right ? CW : 0), bx = par.x + (right ? 0 : CW), dir = right ? 1 : -1;
+      const ay = child.y + CH / 2, by = par.y + CH / 2;
+      const isMerge = idx > 0 || child.ln.is_base;                // a merge: branch work flowing into main
+      const color = isMerge ? par.ln.color : child.ln.color;      // merge takes the merged-in branch color
+      const gy = Math.max(child.y, par.y) - (ROWY - CH) / 2;       // gap just above the lower of the two cards
+      const gx1 = ax + dir * 16, gx2 = bx - dir * 16, off = (idx + (child.ln.i % 3)) * 3;
+      const pts = [[ax, ay], [gx1 + dir * off, ay], [gx1 + dir * off, gy], [gx2 - dir * off, gy], [gx2 - dir * off, by], [bx, by]];
+      out += `<path d="${rounded(pts, 10)}" stroke="${color}" stroke-width="2.5" fill="none" ${isMerge ? '' : 'stroke-dasharray="6 5"'} stroke-linecap="round" stroke-linejoin="round"/>`;
+      out += `<circle cx="${ax}" cy="${ay}" r="4" fill="${color}"/><circle cx="${bx}" cy="${by}" r="4" fill="${color}"/>`;
+    });
+  }
+  // lane header -> newest card connector is the lane line itself; also link a lane with no visible fork edge
+  edges.innerHTML = out;
+  edges.setAttribute('width', 1); edges.setAttribute('height', 1);
+}
+// edges sit under cards: svg is first child of #world and cards are later siblings.
+
+// ----- details -----
+function select(what) {
+  selected = what.card ? what.card.c : null;
+  const s = $('side');
+  if (what.card) {
+    const { c, ln } = what.card, merge = c.parents.length > 1, fork = ln.is_base && L.forkOf[c.hash];
+    const parents = c.parents.map(p => L.at[p] ? `<code>${esc(L.at[p].c.short)}</code>` : `<code>${esc(p.slice(0, 7))}</code>`).join(' + ');
+    let why = merge ? `<b>This is a merge commit.</b> It joins two lines of work (${parents}) into <b>${esc(ln.name)}</b>. If both sides had changed the same lines, Git would have stopped here and asked a human to resolve a <b>conflict</b>.`
+      : `This commit was built on top of ${parents || 'nothing (it is the very first commit)'}.`;
+    if (fork) why += ` <br><br><b>Split point:</b> ${fork.map(esc).join(', ')} and <b>${esc(ln.name)}</b> last shared history here. Anything added to <b>${esc(ln.name)}</b> after this is invisible to that branch until it merges or rebases.`;
+    if (c.unpushed && ln.upstream) why += `<br><br><b>Not pushed:</b> this commit exists only on your computer.`;
+    s.innerHTML = `<button class="x" id="sx">✕</button><span class="pill" style="background:${tint(ln.color, .18)};color:${ln.color}">⑂ ${esc(ln.name)}</span>
+      <h2 style="margin-top:10px">${esc(c.msg)}</h2>
+      <dl class="kv"><dt>Commit</dt><dd><code>${esc(c.short)}</code></dd><dt>Author</dt><dd>${esc(c.author)}</dd><dt>Date</dt><dd>${esc(c.date)}</dd><dt>Built on</dt><dd>${parents || '-'}</dd><dt>Full ID</dt><dd><code style="font-size:11px">${esc(c.hash)}</code></dd></dl>
+      <div class="why">${why}</div>`;
+  } else {
+    const ln = what.lane, base = data.base;
+    let why;
+    if (ln.is_base) why = `<b>${esc(ln.name)}</b> is the main line. Finished work from other branches is merged into it.`;
+    else {
+      const parts = [];
+      parts.push(ln.ahead ? `It has <b>${ln.ahead}</b> commit${ln.ahead > 1 ? 's' : ''} that <b>${esc(base)}</b> doesn't have yet. That is the work waiting to be merged.` : `Everything on it is already in <b>${esc(base)}</b>, so it is <b>fully merged</b> and safe to delete.`);
+      if (ln.behind) parts.push(`<b>${esc(base)}</b> has moved on by <b>${ln.behind}</b> commit${ln.behind > 1 ? 's' : ''} since this branch split off. If those commits touch the same lines as this branch, merging will show a <b>conflict</b>.`);
+      else if (ln.ahead) parts.push(`${esc(base)} hasn't changed since this branch split off, so it merges cleanly.`);
+      why = parts.join('<br><br>');
+    }
+    const tot = ln.ahead + ln.behind, pa = tot ? ln.ahead / tot * 100 : 0;
+    s.innerHTML = `<button class="x" id="sx">✕</button><span class="pill" style="background:${ln.color};color:#fff">⑂ branch</span><h2 style="margin-top:10px">${esc(ln.name)}</h2>
+      <dl class="kv"><dt>Tracks</dt><dd>${ln.upstream ? esc(ln.upstream) + (ln.track ? ` <i>(${esc(ln.track)})</i>` : '') : 'no remote copy'}</dd>
+      ${ln.pr ? `<dt>PR</dt><dd>#${ln.pr.number} ${esc(ln.pr.title)} <span class="pill" style="background:#eee">${esc(ln.pr.state)}</span></dd>` : ''}
+      ${ln.is_base ? '' : `<dt>vs ${esc(base)}</dt><dd>↑${ln.ahead} ahead · ↓${ln.behind} behind</dd>`}</dl>
+      ${!ln.is_base && tot ? `<div class="bar"><i style="width:${pa}%;background:${ln.color}"></i><i style="flex:1;background:${BASE_COLOR};opacity:.5"></i></div><div style="font-size:11px;color:var(--muted)">own work vs. ${esc(base)}'s new work</div>` : ''}
+      <div class="why">${why}</div>`;
+  }
+  s.classList.add('open'); $('sx').onclick = deselect;
+  document.querySelectorAll('.card.sel').forEach(n => n.classList.remove('sel'));
+  if (selected) { const n = world.querySelector(`.card[data-hash="${selected.hash}"]`); n && n.classList.add('sel'); }
+}
+function deselect() { selected = null; $('side').classList.remove('open'); document.querySelectorAll('.card.sel').forEach(n => n.classList.remove('sel')); }
+
+const toggleLane = name => {
+  expanded.has(name) ? expanded.delete(name) : expanded.add(name);
+  store.set(expKey(), [...expanded]);
+  const anchor = view.y; draw(); view.y = anchor; applyView();
 };
-const step = (A, B) => {
-  const vert = (s, e) => { const my = (s[1] + e[1]) / 2; return Math.abs(s[0] - e[0]) < 1 ? [s, e] : [s, [s[0], my], [e[0], my], e]; };
-  if (B.y >= A.y + A.h + 8) return vert([A.x + A.w / 2, A.y + A.h], [B.x + B.w / 2, B.y]);
-  if (B.y + B.h <= A.y - 8) return vert([A.x + A.w / 2, A.y], [B.x + B.w / 2, B.y + B.h]);
-  const right = B.x > A.x, s = [right ? A.x + A.w : A.x, A.y + A.h / 2], e = [right ? B.x : B.x + B.w, B.y + B.h / 2], mx = (s[0] + e[0]) / 2;
-  return [s, [mx, s[1]], [mx, e[1]], e];
+$('expAll').onclick = () => {
+  const all = data.lanes.every(l => expanded.has(l.name) || l.commits.length <= START);
+  expanded = all ? new Set() : new Set(data.lanes.map(l => l.name));
+  store.set(expKey(), [...expanded]); $('expAll').textContent = all ? 'Expand all' : 'Collapse all'; draw();
 };
 
-// ---- card renderers ----
-const commitCard = (g, e, cd, isNew) => {
-  const { x, y, width: w, height: h } = e, acc = cd.accent, r = 12;
-  const card = el('g', { class: 'card' }, g);
-  const body = el('rect', { x, y, width: w, height: h, rx: r, fill: '#fff', stroke: cd.fork ? '#ea580c' : (cd.unpushed ? '#9ca3af' : '#e5e7eb'),
-                            'stroke-width': cd.fork ? 2 : 1, 'stroke-dasharray': cd.unpushed ? '5 4' : '' }, card);
-  el('path', { d: `M${x + 6} ${y} H${x + r} A${r} ${r} 0 0 0 ${x} ${y + r} V${y + h - r} A${r} ${r} 0 0 0 ${x + r} ${y + h} H${x + 6} Z`, fill: acc }, card);
-  if (isNew) { card.setAttribute('filter', 'url(#newGlow)'); body.setAttribute('stroke', '#16a34a'); body.setAttribute('stroke-width', 1.5); }
-  const px = x + 18, right = x + w - 14;
-  const hf = `600 10.5px ${MONO}`, hw = tw(cd.hash, hf) + 14;
-  el('rect', { x: px, y: y + 12, width: hw, height: 19, rx: 6, fill: cd.tint }, g);
-  txt(g, cd.hash, { x: px + 7, y: y + 25.5, 'font-size': 10.5, 'font-weight': 600, fill: acc, class: 'mono' });
-  txt(g, cd.date, { x: right, y: y + 25.5, 'font-size': 11, fill: '#9ca3af', 'text-anchor': 'end' });
-  const lines = wrap(cd.msg, `600 13px ${FONT}`, w - 18 - 14, 2);
-  lines.forEach((l, i) => txt(g, l, { x: px, y: y + 50 + i * 16, 'font-size': 13, 'font-weight': 600, fill: '#111827' }));
-  const cy = y + h - 16;  // author row + state tag
-  el('circle', { cx: px + 7, cy, r: 7.5, fill: avColor(cd.author) }, g);
-  txt(g, initials(cd.author), { x: px + 7, y: cy + 2.7, 'font-size': 7, 'font-weight': 700, fill: '#fff', 'text-anchor': 'middle' });
-  const tag = cd.fork ? [cd.fork, '#c2410c', '#ffedd5'] : cd.merge ? ['MERGE', '#c2410c', '#ffedd5'] : null;
-  let avail = right - (px + 20);
-  if (tag) {
-    const tf = `700 9px ${FONT}`, t = fit1(tag[0], tf, avail * 0.55 - 12), tww = tw(t, tf) + 12;
-    el('rect', { x: right - tww, y: cy - 8, width: tww, height: 16, rx: 8, fill: tag[2] }, g);
-    txt(g, t, { x: right - tww / 2, y: cy + 3.2, 'font-size': 9, 'font-weight': 700, fill: tag[1], 'text-anchor': 'middle' });
-    avail -= tww + 8;
-  }
-  txt(g, fit1(cd.author, `11.5px ${FONT}`, avail), { x: px + 20, y: cy + 4, 'font-size': 11.5, fill: '#6b7280' });
+// ----- view -----
+const applyView = () => {
+  world.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.k})`;
+  const s = 24 * view.k, a = Math.max(0, Math.min(1, (view.k - .2) / .3)) * .22;
+  vp.style.backgroundImage = `radial-gradient(rgba(30,30,60,${a}) 1.1px, transparent 1.4px)`;
+  vp.style.backgroundSize = `${s}px ${s}px`; vp.style.backgroundPosition = `${view.x}px ${view.y}px`;
+  $('zl').textContent = Math.round(view.k * 100) + '%';
 };
-const pointerCard = (g, e, cd) => {
-  const { x, y, width: w, height: h } = e, acc = cd.accent;
-  const card = el('g', { class: 'card' }, g);
-  el('rect', { x, y, width: w, height: h, rx: 12, fill: '#fff', stroke: acc, 'stroke-width': 1.5 }, card);
-  const L = cd.lines, px = x + 14;
-  el('circle', { cx: px + 4, cy: y + 22, r: 4, fill: acc }, g);
-  txt(g, fit1(L[0], `700 13.5px ${FONT}`, w - 40), { x: px + 16, y: y + 26.5, 'font-size': 13.5, 'font-weight': 700, fill: '#111827' });
-  L.slice(1).forEach((l, i) => {
-    const cy = y + 22 + 18 * (i + 1);
-    if (l.startsWith('PR #')) {
-      const c = PRC[cd.pr || 'OPEN'] || PRC.OPEN, f = `700 10px ${FONT}`, t = fit1(l, f, w - 40), pw = tw(t, f) + 14;
-      el('rect', { x: px, y: cy - 9, width: pw, height: 18, rx: 9, fill: c[1] }, g);
-      txt(g, t, { x: px + pw / 2, y: cy + 3.5, 'font-size': 10, 'font-weight': 700, fill: c[0], 'text-anchor': 'middle' });
-    } else txt(g, fit1(l.replace(/^-> /, '↗ '), `11.5px ${FONT}`, w - 28), { x: px, y: cy + 4, 'font-size': 11.5, fill: '#6b7280' });
-  });
+const fit = () => {
+  if (!L) return;
+  const W = vp.clientWidth - 120 - ($('side').classList.contains('open') ? 340 : 0), H = vp.clientHeight - 130;
+  view.k = Math.min(1, W / (L.right + 40), H / (L.bottom + 40));
+  view.x = 80 + 40 * view.k; view.y = 76; applyView();
 };
-const noteCard = (g, e) => {
-  const { x, y, width: w, height: h } = e;
-  const card = el('g', { class: 'card' }, g);
-  el('rect', { x, y, width: w, height: h, rx: 12, fill: '#f9fafb', stroke: '#9ca3af', 'stroke-width': 1, 'stroke-dasharray': '5 4' }, card);
-  const [a, b] = (e._text || '').split('\n');
-  txt(g, a, { x: x + w / 2, y: y + h / 2 - (b ? 3 : -4), 'font-size': 12.5, 'font-weight': 600, fill: '#374151', 'text-anchor': 'middle' });
-  if (b) txt(g, b, { x: x + w / 2, y: y + h / 2 + 13, 'font-size': 11, fill: '#6b7280', 'text-anchor': 'middle' });
-};
-const legendPill = (g, e) => {
-  const { x, y, width: w, height: h } = e, dashed = e.strokeStyle === 'dashed';
-  el('rect', { x, y, width: w, height: h, rx: h / 2, fill: '#fff', stroke: '#e5e7eb' }, g);
-  el('circle', { cx: x + 14, cy: y + h / 2, r: 5, fill: dashed ? 'none' : e.strokeColor, stroke: e.strokeColor, 'stroke-width': 1.5, 'stroke-dasharray': dashed ? '2 2' : '' }, g);
-  txt(g, e._text, { x: x + 26, y: y + h / 2 + 4, 'font-size': 11.5, fill: '#374151' });
-};
-const pill = (g, x, y, text, bg, fg) => {
-  const w = tw(text, `700 10px ${FONT}`) + 16;
-  el('rect', { x, y: y - 13, width: w, height: 19, rx: 9.5, fill: bg }, g);
-  txt(g, text, { x: x + 8, y, 'font-size': 10, 'font-weight': 700, fill: fg });
-  return w;
-};
+const goNewest = () => { view.k = 1; view.x = 100; view.y = 80; applyView(); };
+const zoomAt = (cx, cy, k) => { k = Math.min(2.5, Math.max(.1, k)); view.x = cx - (cx - view.x) * (k / view.k); view.y = cy - (cy - view.y) * (k / view.k); view.k = k; applyView(); };
+let drag = null;
+vp.onpointerdown = e => { if (e.target.closest('.card,.lane-head,.more')) return; drag = { x: e.clientX - view.x, y: e.clientY - view.y, sx: e.clientX, sy: e.clientY }; };
+window.addEventListener('pointermove', e => { if (drag) { view.x = e.clientX - drag.x; view.y = e.clientY - drag.y; vp.classList.add('drag'); applyView(); } });
+window.addEventListener('pointerup', e => { if (drag && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 4) deselect(); drag = null; vp.classList.remove('drag'); });
+vp.addEventListener('wheel', e => {
+  e.preventDefault();
+  const mouse = e.deltaMode === 1 || (e.deltaX === 0 && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 100);  // notched mouse wheel -> zoom, trackpad -> pan
+  if (e.ctrlKey || e.metaKey || mouse) zoomAt(e.clientX, e.clientY, view.k * Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0015)));
+  else { view.x -= e.deltaX; view.y -= e.deltaY; applyView(); }
+}, { passive: false });
+$('zi').onclick = () => zoomAt(vp.clientWidth / 2, vp.clientHeight / 2, view.k * 1.25);
+$('zo').onclick = () => zoomAt(vp.clientWidth / 2, vp.clientHeight / 2, view.k / 1.25);
+$('tFit').onclick = fit; $('tTop').onclick = goNewest;
+$('tHelp').onclick = () => $('help').classList.toggle('open');
+window.addEventListener('keydown', e => {
+  if (/INPUT|SELECT/.test(e.target.tagName)) return;
+  if (e.key === 'f') fit(); else if (e.key === 'n') goNewest(); else if (e.key === '?') $('help').classList.toggle('open'); else if (e.key === 'Escape') deselect();
+});
 
-const hashes = s => new Set((s.els_full || s.els).filter(e => e.customData && e.customData.hash).map(e => e.customData.hash));
-const drawSnapshot = (s, older) => {
-  const g = el('g', { transform: `translate(${s.ox - s.box.x0} 0)` }, world), b = s.box;
-  const seen = older ? hashes(older) : null;
-  const key = `${cur}|${s.ts}|${s.open ? 'f' : 'c'}`, off = POS[key] || (POS[key] = {});
-  const top = b.y0 - 118, x0 = b.x0 - PAD, W = b.x1 - b.x0 + PAD * 2;
-  el('rect', { class: 'sheet', x: x0, y: top, width: W, height: b.y1 - top + PAD + 24, rx: 26 }, g);
-  txt(g, `SNAPSHOT #${s.n}`, { x: b.x0, y: top + 40, 'font-size': 11, 'font-weight': 700, fill: '#9ca3af', 'letter-spacing': '.08em' });
-  let px = b.x0 + 96;
-  if (s.latest) px += pill(g, px, top + 40, 'LATEST', '#eef2ff', '#4338ca') + 8;
-  let fresh = 0;
-  for (const e of s.cur) if (seen && e.customData && e.customData.hash && !seen.has(e.customData.hash)) fresh++;
-  if (fresh) pill(g, px, top + 40, `${fresh} new commit${fresh > 1 ? 's' : ''}`, '#dcfce7', '#15803d');
-  const m = s.meta || {};
-  txt(g, `${data.repo}${m.base ? ' · ' + m.base : ''}`, { x: b.x0, y: top + 70, 'font-size': 22, 'font-weight': 650, fill: '#111827' });
-  const stats = m.branches != null ? `${m.branches} other branch${m.branches === 1 ? '' : 'es'}${m.skipped ? ` (+${m.skipped} older not shown)` : ''} · ` : '';
-  txt(g, stats + s.ts, { x: b.x0, y: top + 90, 'font-size': 12, fill: '#6b7280' });
-  const buttons = [];
-  if (s.els_full) buttons.push([s.open ? 'Collapse history' : 'Show all commits', () => toggle(s.ts)]);
-  if (Object.keys(off).length) buttons.push(['Reset layout', () => { delete POS[key]; store.set('gd-pos', POS); render(); }]);
-  let bx = b.x1;
-  for (const [label, fn] of buttons) {
-    const bw = tw(label, `600 12px ${FONT}`) + 28; bx -= bw;
-    const btn = el('g', { class: 'btn', transform: `translate(${bx} ${top + 28})` }, g);
-    el('rect', { width: bw, height: 30, rx: 10 }, btn); txt(btn, label, { x: bw / 2, y: 19.5, 'text-anchor': 'middle' });
-    btn.onclick = fn; bx -= 8;
-  }
-  const byId = Object.fromEntries(s.cur.map(e => [e.id, e]));
-  for (const e of s.cur) if (e.type === 'text' && e.containerId && byId[e.containerId]) byId[e.containerId]._text = e.text;
-  const edgeLayer = el('g', {}, g), nodeLayer = el('g', {}, g), nodes = {};
-  const rect = id => { const n = nodes[id]; return { x: n.e.x + n.dx, y: n.e.y + n.dy, w: n.e.width, h: n.e.height }; };
-  const moved = id => nodes[id].dx || nodes[id].dy;
-  for (const e of s.cur) if (e.type === 'rectangle') {
-    const cd = e.customData || {}, k = cd.kind;
-    if (k === 'legend') { legendPill(g, e); continue; }
-    const ng = el('g', { class: 'node' }, nodeLayer);
-    const n = nodes[e.id] = { e, g: ng, dx: (off[e.id] || [0, 0])[0], dy: (off[e.id] || [0, 0])[1], edges: [] };
-    ng.setAttribute('transform', `translate(${n.dx} ${n.dy})`);
-    if (k === 'commit') commitCard(ng, e, cd, seen && cd.hash && !seen.has(cd.hash));
-    else if (k === 'pointer') pointerCard(ng, e, cd);
-    else noteCard(ng, e);
-    ng.onpointerdown = ev => { ev.stopPropagation(); dragNode = { n, key, off, onClick: k === 'more' ? () => toggle(s.ts) : null, sx: ev.clientX, sy: ev.clientY, ox: n.dx, oy: n.dy, moved: false }; };
-  }
-  for (const e of s.cur) if (e.type === 'arrow' && nodes[e.startBinding.elementId] && nodes[e.endBinding.elementId]) {
-    const a = e.startBinding.elementId, bb = e.endBinding.elementId, acd = nodes[a].e.customData || {};
-    const color = acd.kind === 'pointer' ? acd.accent : e.strokeColor === '#e03131' ? '#ef4444' : '#a3a9b5';
-    const path = el('path', { fill: 'none', stroke: color, 'stroke-width': 1.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'marker-end': marker(color) }, edgeLayer);
-    const pts = e.points.map(p => [e.x + p[0], e.y + p[1]]);
-    const ed = { upd: () => path.setAttribute('d', rounded(moved(a) || moved(bb) ? step(rect(a), rect(bb)) : pts)) };
-    nodes[a].edges.push(ed); nodes[bb].edges.push(ed); ed.upd();
-  }
-};
-// ---- dragging cards (window-level so a fast drag never loses the card) ----
-let dragNode = null;
-window.addEventListener('pointermove', ev => {
-  const d = dragNode; if (!d) return;
-  const dx = (ev.clientX - d.sx) / view.k, dy = (ev.clientY - d.sy) / view.k;
-  if (!d.moved && Math.hypot(dx, dy) * view.k < 4) return;
-  if (!d.moved) { d.moved = true; d.n.g.classList.add('lift'); d.n.g.parentNode.appendChild(d.n.g); }
-  d.n.dx = d.ox + dx; d.n.dy = d.oy + dy;
-  d.n.g.setAttribute('transform', `translate(${d.n.dx} ${d.n.dy})`);
-  d.n.edges.forEach(ed => ed.upd());
-});
-window.addEventListener('pointerup', () => {
-  const d = dragNode; if (!d) return; dragNode = null;
-  d.n.g.classList.remove('lift');
-  if (!d.moved) return d.onClick && d.onClick();
-  d.off[d.n.e.id] = [Math.round(d.n.dx), Math.round(d.n.dy)];
-  store.set('gd-pos', POS); render();  // re-render so "Reset layout" appears; view is untouched
-});
-const toggle = ts => { expanded.has(ts) ? expanded.delete(ts) : expanded.add(ts); store.set('gd-exp', [...expanded]); render(); };
-const render = () => {
-  world.innerHTML = '';
-  const snaps = data.snapshots.map((s, i) => {
-    const open = expanded.has(s.ts) && !!s.els_full, cur = open ? s.els_full : s.els;
-    const box = bbox(cur.filter(e => e.type !== 'text' || e.containerId)); box.x1 = Math.max(box.x1, box.x0 + 620);
-    return { ...s, n: i + 1, open, cur, box, latest: i === data.snapshots.length - 1 };
-  });
-  let ox = 0; layout = [];
-  for (const s of snaps.slice().reverse()) { s.ox = ox; layout.push(s); ox += s.box.x1 - s.box.x0 + PAD * 2 + GAP; }
-  layout.forEach(s => drawSnapshot(s, snaps[s.n - 2]));
-  applyView();
-};
-const fit = list => {
-  if (!list.length) return;
-  const x1 = Math.max(...list.map(s => s.ox + s.box.x1 - s.box.x0 + PAD)), y1 = Math.max(...list.map(s => s.box.y1 + PAD + 24)), y0 = -118;
-  const W = cv.clientWidth - 80, H = cv.clientHeight - 110;
-  view.k = Math.min(1, W / (x1 + PAD), H / (y1 - y0 + 20));
-  view.x = 40 + PAD * view.k; view.y = 90 - y0 * view.k; applyView();
-};
-const latest = () => layout.length ? [layout[0]] : [];
-const busy = (on, msg) => { $('reload').disabled = on; if (msg) status(msg); };
+// ----- repos -----
+const busy = (on, msg) => { $('reload').disabled = on; if (msg) $('status').textContent = msg; };
 const openRepo = async reload => {
   busy(true, reload ? 'reading git…' : 'loading…');
   try {
-    let d = reload ? await api(`/api/reload?repo=${cur}`, { method: 'POST' }) : await api(`/api/history?repo=${cur}`);
-    if (!d.snapshots.length) d = await api(`/api/reload?repo=${cur}`, { method: 'POST' });
-    data = d; render(); fit(latest());
-    const n = d.snapshots.length;
-    status(reload && d.changed === false ? `No changes since snapshot #${n}` : `${n} snapshot${n > 1 ? 's' : ''} · ${d.snapshots[n - 1].ts}`);
-  } catch (e) { status('error: ' + e.message); }
+    const d = await api(`/api/graph?repo=${cur}`, { method: reload ? 'POST' : 'GET' });
+    data = d; data.github = (repos.find(r => r.id === cur) || {}).kind === 'github';
+    expanded = new Set(store.get(expKey(), [])); selected = null; deselect();
+    draw(); fit();
+    const n = d.lanes.reduce((a, l) => a + l.commits.length, 0), f = (d.fresh || []).length;
+    $('status').textContent = `${d.lanes.length - 1} branch${d.lanes.length === 2 ? '' : 'es'} · ${n} commits` + (d.skipped ? ` (+${d.skipped} older branches hidden)` : '') + (f ? ` · ${f} new` : '');
+    $('expAll').textContent = 'Expand all';
+  } catch (e) { $('status').textContent = 'error: ' + e.message; world.querySelectorAll('.card,.lane-head,.lane-line,.more').forEach(n => n.remove()); edges.innerHTML = ''; $('emptyMsg').textContent = e.message; $('empty').style.display = 'grid'; }
   busy(false);
 };
 const fillRepos = () => {
-  $('repo').innerHTML = repos.map(r => `<option value="${r.id}">${r.kind === 'github' ? '⌁ ' : ''}${r.name}</option>`).join('');
-  $('repo').value = cur;
-  $('rmBtn').style.display = repos.length > 1 ? '' : 'none';
+  $('repo').innerHTML = repos.map(r => `<option value="${esc(r.id)}">${r.kind === 'github' ? '⌁ ' : ''}${esc(r.name)}</option>`).join('');
+  $('repo').value = cur; $('rmBtn').style.display = repos.length > 1 ? '' : 'none';
 };
-$('repo').onchange = e => { cur = e.target.value; store.set('gd-repo', cur); openRepo(false); };
+$('repo').onchange = e => { cur = e.target.value; store.set('gc-repo', cur); openRepo(false); };
 $('reload').onclick = () => openRepo(true);
-$('fitNew').onclick = () => fit(latest());
-$('fitAll').onclick = () => fit(layout);
 $('addBtn').onclick = () => { $('pop').classList.toggle('open'); $('src').focus(); };
 const addRepo = async () => {
-  const src = $('src').value.trim(), m = $('popmsg');
-  if (!src) return;
+  const src = $('src').value.trim(), m = $('popmsg'); if (!src) return;
   $('addGo').disabled = true; m.className = ''; m.textContent = 'Adding…';
   try {
     const r = await api('/api/repos', { method: 'POST', body: JSON.stringify({ source: src }) });
-    repos = r.repos; cur = r.added; store.set('gd-repo', cur); fillRepos();
-    $('pop').classList.remove('open'); $('src').value = ''; m.textContent = ''; await openRepo(true);
+    repos = r.repos; cur = r.added; store.set('gc-repo', cur); fillRepos();
+    $('pop').classList.remove('open'); $('src').value = ''; await openRepo(true);
   } catch (e) { m.className = 'err'; m.textContent = e.message; }
   $('addGo').disabled = false;
 };
 $('addGo').onclick = addRepo;
 $('rmBtn').onclick = async () => {
-  try {
-    repos = (await api('/api/repos/remove', { method: 'POST', body: JSON.stringify({ id: cur }) })).repos;
-    cur = repos[0].id; store.set('gd-repo', cur); fillRepos(); openRepo(false);
-  } catch (e) { status(e.message); }
+  try { repos = (await api('/api/repos/remove', { method: 'POST', body: JSON.stringify({ id: cur }) })).repos; cur = repos[0].id; store.set('gc-repo', cur); fillRepos(); openRepo(false); }
+  catch (e) { $('status').textContent = e.message; }
 };
-// terminal-style folder suggestions
+// folder suggestions (terminal-style)
 let sugs = [], sel = -1, sugTimer = null;
 const showSugs = () => {
-  const box = $('sug');
-  box.classList.toggle('open', sugs.length > 0); box.innerHTML = '';
-  sugs.forEach((d, i) => {
-    const row = document.createElement('div'); row.className = i === sel ? 'on' : '';
-    row.innerHTML = `<span>📁</span><span></span>${d.git ? '<i>git</i>' : ''}`; row.children[1].textContent = d.name + '/';
-    row.onmousedown = e => { e.preventDefault(); pick(i); };
-    box.appendChild(row);
-  });
+  const box = $('sug'); box.classList.toggle('open', sugs.length > 0); box.innerHTML = '';
+  sugs.forEach((d, i) => { const r = document.createElement('div'); r.className = i === sel ? 'on' : ''; r.innerHTML = `<span>📁</span><span></span>${d.git ? '<i>git</i>' : ''}`; r.children[1].textContent = d.name + '/'; r.onmousedown = e => { e.preventDefault(); pick(i); }; box.appendChild(r); });
 };
 const fetchSugs = async () => {
-  const v = $('src').value;
-  if (!/^[~\/.]/.test(v)) { sugs = []; return showSugs(); }
+  const v = $('src').value; if (!/^[~\/.]/.test(v)) { sugs = []; return showSugs(); }
   try { sugs = (await api('/api/ls?q=' + encodeURIComponent(v))).dirs; } catch { sugs = []; }
   sel = -1; showSugs();
 };
@@ -384,31 +424,12 @@ $('src').oninput = () => { clearTimeout(sugTimer); sugTimer = setTimeout(fetchSu
 $('src').onkeydown = e => {
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { if (sugs.length) { e.preventDefault(); sel = (sel + (e.key === 'ArrowDown' ? 1 : -1) + sugs.length) % sugs.length; showSugs(); } }
   else if (e.key === 'Tab' && sugs.length) { e.preventDefault(); pick(sel >= 0 ? sel : 0); }
-  else if (e.key === 'Enter') { if (sel >= 0) pick(sel); else addRepo(); }
+  else if (e.key === 'Enter') { sel >= 0 ? pick(sel) : addRepo(); }
   else if (e.key === 'Escape') { if (sugs.length) { sugs = []; showSugs(); } else $('pop').classList.remove('open'); }
 };
-// pan / zoom
-const zoomAt = (cx, cy, k) => {
-  k = Math.min(3, Math.max(0.05, k));
-  view.x = cx - (cx - view.x) * (k / view.k); view.y = cy - (cy - view.y) * (k / view.k); view.k = k; applyView();
-};
-let drag = null;
-cv.onpointerdown = e => { if (!e.target.closest('.btn,.node')) drag = { x: e.clientX - view.x, y: e.clientY - view.y }; };
-window.addEventListener('pointermove', e => { if (drag) { view.x = e.clientX - drag.x; view.y = e.clientY - drag.y; cv.classList.add('drag'); applyView(); } });
-window.addEventListener('pointerup', () => { drag = null; cv.classList.remove('drag'); });
-cv.onwheel = e => {
-  e.preventDefault();
-  if (e.ctrlKey || e.metaKey) zoomAt(e.clientX, e.clientY, view.k * Math.exp(-e.deltaY * 0.01));
-  else { view.x -= e.deltaX; view.y -= e.deltaY; applyView(); }
-};
-$('zi').onclick = () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, view.k * 1.25);
-$('zo').onclick = () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, view.k / 1.25);
 (async () => {
-  try {
-    repos = (await api('/api/repos')).repos;
-    if (!repos.some(r => r.id === cur)) cur = repos[0].id;
-    fillRepos(); await openRepo(true);
-  } catch (e) { status('error: ' + e.message); }
+  try { repos = (await api('/api/repos')).repos; if (!repos.some(r => r.id === cur)) cur = repos[0].id; fillRepos(); await openRepo(true); }
+  catch (e) { $('status').textContent = 'error: ' + e.message; }
 })();
 </script>
 </body>

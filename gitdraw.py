@@ -11,7 +11,7 @@ orange outline = fork point (merge-base) of a branch, orange fill = merge commit
 (2nd-parent) edges. Every run then renders FILE's .png (needs Pillow) and checks it for overlapping
 boxes, text overflowing its box, arrows crossing unrelated boxes; exit code 2 if any problem found.
 Only the first-parent chain of each lane is drawn (merged-in side commits are collapsed).
-`--serve [--port 8765]` runs a local infinite-canvas viewer (viewer.html): Reload appends a new snapshot beside the old ones (only if refs changed), new commits get a NEW badge; history persists in output/. The repo dropdown / "+ Add repo" accepts owner/repo, a github.com URL or a local folder (GitHub repos are read through the GitHub API via `gh`, nothing is cloned; needs `gh auth login`). Commits collapse to the newest few per branch; "Show all commits" expands the whole snapshot (--max-commits, --cap, --max-branches tune this).
+`--serve [--port 8765]` runs a local infinite-canvas viewer (viewer.html): one live canvas, branches are columns, each branch expands on its own; Reload re-reads git and marks commits that appeared since the last Reload as NEW. The repo dropdown / "+ Add repo" accepts owner/repo, a github.com URL or a local folder (GitHub repos are read through the GitHub API via `gh`, nothing is cloned; needs `gh auth login`). Commits collapse to the newest few per branch; each branch expands on its own via "Show N older commits" (--max-commits, --cap, --max-branches tune this).
 Run `python gitdraw.py --selftest` to build a throwaway repo and exercise everything.
 """
 import argparse, datetime, hashlib, json, os, random, re, subprocess, sys, tempfile, time
@@ -502,7 +502,7 @@ def main(argv=None):
     ap.add_argument("--out", default="tools/gitdraw/output/repo-diagram.excalidraw")
     ap.add_argument("--max-commits", type=int, default=6, help="commits shown per lane before the rest collapse (default 6)")
     ap.add_argument("--cap", type=int, default=500, help="max commits per lane when everything is shown (default 500)")
-    ap.add_argument("--max-branches", type=int, default=8, help="most recently updated branches to draw (default 8)")
+    ap.add_argument("--max-branches", type=int, default=10, help="most recently updated branches to draw (default 8)")
     ap.add_argument("--full", action="store_true", help="one-off output: show all commits instead of collapsing")
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--serve", action="store_true", help="serve the interactive infinite-canvas viewer (viewer.html)")
@@ -527,27 +527,23 @@ def main(argv=None):
         print("LAYOUT PROBLEM:", p)
     return 2 if probs else 0
 
-def snapshot(a, x):
-    """current state of repo entry x as a viewer snapshot. els = collapsed layout, els_full = every commit (None if identical)."""
+def graph(a, x):
+    """current state of repo entry x as plain JSON for the viewer: one lane per branch, every commit up to the cap (the browser decides how many to show)."""
     only = set(a.branches.split(",")) if a.branches else None
     if x["kind"] == "github":  # API only, nothing cloned; GraphQL returns at most 100 commits per branch
-        raw = fetch_github(x["owner"], x["repo"], a.cap, a.max_branches)
-        base, lanes = lanes_github(raw, a.max_commits, False, 100, a.max_branches)
-        els, full = build(x["name"], base, lanes, True).els, None
-        if any(l["hidden"] for l in lanes):
-            base, lanes = lanes_github(raw, a.max_commits, True, 100, a.max_branches)
-            full = build(x["name"], base, lanes, False).els
-        refs = [base] + [(b["name"], b["target"]["oid"]) for b in raw["repo"]["refs"]["nodes"]] + [raw["repo"]["base"]["target"]["oid"]]
-        sig = hashlib.sha1(json.dumps(refs).encode()).hexdigest()
+        raw = fetch_github(x["owner"], x["repo"], 100, a.max_branches)
+        base, lanes = lanes_github(raw, a.max_commits, True, 100, a.max_branches)
     else:
-        repo, label = x["path"], x["name"]
-        base, _, lanes = collect(repo, a.base, only, a.max_commits, max_branches=a.max_branches)
-        els, full = build(label, base, lanes, True).els, None
-        if any(l["hidden"] for l in lanes):
-            base, _, lanes = collect(repo, a.base, only, a.max_commits, True, a.cap, a.max_branches)
-            full = build(label, base, lanes, False).els
-        sig = hashlib.sha1(git(repo, "for-each-ref", "--format=%(refname) %(objectname)", "refs/heads", "refs/remotes").encode()).hexdigest()
-    return dict(ts=time.strftime("%Y-%m-%d %H:%M:%S"), sig=sig, els=els, els_full=full, meta=dict(base=base, branches=len(lanes) - 1, skipped=lanes[0].get("skipped", 0)))
+        base, _, lanes = collect(x["path"], a.base, only, a.max_commits, True, a.cap, a.max_branches)
+    out = []
+    for ln in lanes:
+        info, pr = ln["info"], ln["pr"]
+        out.append(dict(
+            name=ln["name"], is_base=ln["is_base"], mb=ln.get("mb"), ahead=ln.get("ahead", 0), behind=ln.get("behind", 0),
+            more=ln["hidden"], upstream=info.get("upstream"), track=info.get("track", ""),
+            pr=dict(number=pr["number"], state=pr["state"], title=pr["title"]) if pr else None,
+            commits=[dict(c, unpushed=c["hash"] in ln["unpushed"]) for c in ln["commits"]]))
+    return dict(base=base, skipped=lanes[0].get("skipped", 0), lanes=out, ts=time.strftime("%Y-%m-%d %H:%M:%S"))
 
 def list_dirs(q):
     """terminal-style completion for the folder box: sub-folders matching what has been typed so far."""
@@ -586,8 +582,19 @@ def serve(a, repo):
         return r
     def find(i):
         return next((x for x in repos() if x["id"] == i), None) or repos()[0]
-    def hist(x):
-        return os.path.join(out, f"history-{x['id']}.json")
+    def seen_path(x):
+        return os.path.join(out, f"seen-{x['id']}.json")
+    def hashes(g):
+        return sorted({c["hash"] for ln in g["lanes"] for c in ln["commits"]})
+    def load(x, reload):
+        """graph + the commits that appeared since the last explicit Reload (the baseline only moves on Reload)."""
+        g = graph(a, x)
+        prev = jload(seen_path(x), None)
+        cur = hashes(g)
+        g["fresh"] = [h for h in cur if prev is not None and h not in set(prev)]
+        if reload or prev is None:
+            json.dump(cur, open(seen_path(x), "w"))
+        return g
     def add(source):
         source = source.strip()
         p = os.path.abspath(os.path.expanduser(source))
@@ -612,14 +619,6 @@ def serve(a, repo):
         if i == rid(repo):
             raise ValueError("that is the folder the server was started in")
         json.dump([x for x in repos() if x["id"] != i], open(reg, "w"))
-    def reload(x):
-        h = jload(hist(x), [])
-        s = snapshot(a, x)
-        changed = not h or h[-1]["sig"] != s["sig"]
-        if changed:
-            h = (h + [s])[-30:]
-            json.dump(h, open(hist(x), "w"))
-        return dict(changed=changed, snapshots=h)
     port = a.port
     class H(BaseHTTPRequestHandler):
         def reply(self, body, ctype="application/json", code=200):
@@ -643,10 +642,8 @@ def serve(a, repo):
                 if u.path == "/api/ls":
                     return self.reply(dict(dirs=list_dirs(q.get("q", [""])[0])))
                 x = find(q.get("repo", [""])[0])
-                if u.path == "/api/history":
-                    return self.reply(dict(repo=x["name"], id=x["id"], snapshots=jload(hist(x), [])))
-                if u.path == "/api/reload" and post:
-                    return self.reply(dict(repo=x["name"], id=x["id"], **reload(x)))
+                if u.path == "/api/graph":
+                    return self.reply(dict(repo=x["name"], id=x["id"], **load(x, post)))
                 return self.reply(open(os.path.join(here, "viewer.html"), "rb").read(), "text/html; charset=utf-8")
             except (ValueError, OSError, subprocess.SubprocessError, SystemExit) as e:
                 self.reply({"error": str(e)}, code=400)
