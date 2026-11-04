@@ -28,9 +28,6 @@
   .sep { width:1px; height:22px; background:var(--line); margin:0 4px }
   #status { position:fixed; top:68px; left:50%; transform:translateX(-50%); z-index:4; font-size:13.5px; color:var(--muted); background:rgba(255,255,255,.85); backdrop-filter:blur(6px); padding:4px 14px; border-radius:20px; box-shadow:0 0 0 1px var(--line); white-space:nowrap; max-width:calc(100vw - 24px); overflow:hidden; text-overflow:ellipsis }
   body.side #top, body.side #status, body.side .pop { left:calc((100vw - 404px) / 2) }
-  #tools { top:50%; left:14px; transform:translateY(-50%); display:flex; flex-direction:column; padding:6px; gap:2px }
-  #tools button { width:44px; height:44px; border-radius:10px; font-size:19px; display:grid; place-items:center; color:#344054 }
-  #tools button:hover { background:#f1f2f5 } #tools hr { border:0; height:1px; background:var(--line); width:28px; margin:3px auto }
   #zoom { right:14px; bottom:14px; display:flex; align-items:center; padding:5px }
   #zoom button { width:36px; height:36px; border-radius:10px; font-size:19px } #zoom button:hover { background:#f1f2f5 }
   #zl { min-width:54px; text-align:center; color:var(--muted); font-size:14px; font-variant-numeric:tabular-nums }
@@ -125,7 +122,7 @@
   #sug { margin-top:8px; border-radius:10px; max-height:200px; overflow:auto; display:none; box-shadow:0 0 0 1px var(--line) inset; padding:4px }
   #sug.open { display:block } #sug div { padding:7px 9px; border-radius:7px; cursor:pointer; display:flex; gap:8px; font-size:14px }
   #sug div.on,#sug div:hover { background:#eef1ff } #sug i { font-style:normal; margin-left:auto; font-size:11px; font-weight:700; color:#15803d; background:#dcfce7; border-radius:8px; padding:1px 8px }
-  #help { left:74px; bottom:14px; padding:16px 18px; width:360px; display:none; font-size:14px; line-height:1.55 }
+  #help { right:14px; bottom:68px; padding:16px 18px; width:360px; display:none; font-size:14px; line-height:1.55 }
   #help.open { display:block } #help h3 { margin:0 0 8px; font-size:15px } #help li { margin:5px 0 } #help ul { margin:0; padding-left:18px }
   .sw { display:inline-block; width:22px; height:0; border-top:3px solid; vertical-align:middle; margin-right:6px } .sw.d { border-top-style:dashed }
   #empty { position:fixed; inset:0; display:none; place-items:center; color:var(--muted); pointer-events:none; text-align:center; font-size:16px; padding:0 20%; z-index:1 }
@@ -171,13 +168,6 @@
   <div id="hotList"></div>
 </div>
 
-<div id="tools" class="float">
-  <button id="tFit" title="Fit everything (F)">⤢</button>
-  <button id="tTop" title="Jump to newest commits (N)">⇡</button>
-  <button id="tTidy" title="Tidy up: put every card back in its place (T)">↺</button>
-  <hr>
-  <button id="tHelp" title="How to read this (?)">?</button>
-</div>
 
 <div id="help" class="float">
   <h3>How to read this board</h3>
@@ -193,7 +183,7 @@
 </div>
 
 <aside id="side" class="float"></aside>
-<div id="zoom" class="float"><button id="zo" aria-label="Zoom out">−</button><span id="zl">100%</span><button id="zi" aria-label="Zoom in">+</button></div>
+<div id="zoom" class="float"><button id="tFit" title="Fit everything (F)" aria-label="Fit">⤢</button><button id="tTidy" title="Tidy up: put every card back (T)" aria-label="Tidy up">↺</button><span class="sep"></span><button id="zo" aria-label="Zoom out">−</button><span id="zl">100%</span><button id="zi" aria-label="Zoom in">+</button><span class="sep"></span><button id="tHelp" title="How to read this (?)" aria-label="Help">?</button></div>
 <div id="toast"></div>
 
 <script>
@@ -523,7 +513,7 @@ const fit = () => {
 };
 const goNewest = () => { const b = bounds(); view.k = Math.max(.8, Math.min(1, (vp.clientWidth - 150) / (b.x1 - b.x0))); view.x = 100 - b.x0 * view.k; view.y = 110 - b.y0 * view.k; applyView(); };
 const zoomAt = (cx, cy, k) => { k = Math.min(2.5, Math.max(.08, k)); view.x = cx - (cx - view.x) * (k / view.k); view.y = cy - (cy - view.y) * (k / view.k); view.k = k; applyView(); };
-$('tFit').onclick = fit; $('tTop').onclick = goNewest;
+$('tFit').onclick = fit;
 $('tTidy').onclick = () => { offs = {}; store.set(offKey(), {}); draw(); toast('Everything is back in place'); };
 $('tHelp').onclick = () => { closePops(); $('help').classList.toggle('open'); };
 $('zi').onclick = () => zoomAt(vp.clientWidth / 2, vp.clientHeight / 2, view.k * 1.25);
