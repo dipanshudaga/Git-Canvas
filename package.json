@@ -2,7 +2,13 @@
   "name": "git-canvas",
   "version": "1.0.0",
   "private": true,
-  "description": "See any GitHub repo as a map: branches, commits, merges, conflicts, PRs and CI on an infinite canvas.",
+  "description": "Git Canvas shows a GitHub repository as a map. Each branch is a column. Each commit is a card. See merges, conflicts, pull requests, and CI.",
+  "homepage": "https://dipanshudaga.github.io/Git-Canvas/",
+  "repository": { "type": "git", "url": "git+https://github.com/dipanshudaga/Git-Canvas.git" },
+  "bugs": { "url": "https://github.com/dipanshudaga/Git-Canvas/issues" },
+  "author": "Dipanshu Daga",
+  "license": "MIT",
+  "keywords": ["git", "github", "git-graph", "visualization", "branches", "merge-conflicts", "infinite-canvas", "developer-tools"],
   "scripts": {
     "dev": "python3 gitdraw.py --serve --repo .",
     "dev:static": "python3 -m http.server 8080"

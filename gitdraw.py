@@ -865,7 +865,7 @@ def serve(a, repo):
                     x = find(q.get("repo", [""])[0])
                     a2 = copy.copy(a); a2.max_branches = max(1, min(100, int(q.get("max", [a.max_branches])[0])))
                     return self.reply(dict(repo=x["name"], id=x["id"], **load(x, post, a2)))
-                assets = {"/favicon.svg": "image/svg+xml", "/favicon.png": "image/png", "/apple-touch-icon.png": "image/png"}
+                assets = {"/favicon.svg": "image/svg+xml", "/favicon.png": "image/png", "/apple-touch-icon.png": "image/png", "/assets/preview.png": "image/png"}
                 if u.path in assets:
                     return self.reply(open(os.path.join(here, u.path[1:]), "rb").read(), assets[u.path])
                 return self.reply(open(os.path.join(here, "index.html"), "rb").read(), "text/html; charset=utf-8")
