@@ -14,7 +14,7 @@ Only the first-parent chain of each lane is drawn (merged-in side commits are co
 `--serve [--port 8765]` runs a local infinite-canvas viewer (viewer.html): one live canvas, branches are columns, each branch expands on its own; Reload re-reads git and marks commits that appeared since the last Reload as NEW. The repo dropdown / "+ Add repo" accepts owner/repo, a github.com URL or a local folder (GitHub repos are read through the GitHub API via `gh`, nothing is cloned; needs `gh auth login`). Commits collapse to the newest few per branch; each branch expands on its own via "Show N older commits" (--max-commits, --cap, --max-branches tune this).
 Run `python gitdraw.py --selftest` to build a throwaway repo and exercise everything.
 """
-import argparse, datetime, hashlib, json, os, random, re, subprocess, sys, tempfile, time
+import argparse, copy, datetime, hashlib, json, os, random, re, subprocess, sys, tempfile, time
 
 try:
     from PIL import Image, ImageDraw, ImageFont
@@ -69,11 +69,12 @@ def commits_of(repo, ref, exclude=None, limit=None):
 def pull_prs(repo):
     try:
         r = subprocess.run(["gh", "pr", "list", "--state", "all", "--limit", "100", "--json",
-                            "number,title,state,headRefName,baseRefName"], cwd=repo, capture_output=True, text=True, timeout=20)
+                            "number,title,state,headRefName,baseRefName,url,isDraft,mergeable,reviewDecision,author,createdAt"], cwd=repo, capture_output=True, text=True, timeout=20)
         if r.returncode:
             return {}
         prs = {}
         for p in json.loads(r.stdout):  # newest first; keep the newest per head branch
+            p["author"] = (p.get("author") or {}).get("login")
             prs.setdefault(p["headRefName"], p)
         return prs
     except (OSError, ValueError, subprocess.SubprocessError):
@@ -131,7 +132,7 @@ def collect(repo, base, only, limit, full=False, cap=500, max_branches=8):
 GQL = """query($o:String!,$n:String!,$c:Int!,$b:Int!,$base:String!){repository(owner:$o,name:$n){
  refs(refPrefix:"refs/heads/",first:$b,orderBy:{field:TAG_COMMIT_DATE,direction:DESC}){totalCount nodes{name compare(headRef:$base){aheadBy behindBy} target{...C}}}
  base:ref(qualifiedName:$base){target{...C}}
- pullRequests(first:50,orderBy:{field:UPDATED_AT,direction:DESC}){nodes{number title state headRefName}}}}
+ pullRequests(first:100,orderBy:{field:UPDATED_AT,direction:DESC}){nodes{number title state headRefName baseRefName url isDraft mergeable reviewDecision createdAt author{login}}}}}
 fragment C on Commit{oid history(first:$c){totalCount nodes{oid abbreviatedOid messageHeadline committedDate author{name} parents(first:2){nodes{oid}}}}}"""
 
 def gh(*args):
@@ -192,6 +193,7 @@ def lanes_github(raw, limit, full, cap, max_branches=8):
         base_commits = [c for i, c in enumerate(base_commits) if i < lim or c["hash"] in keep]
     prs = {}
     for p in repo["pullRequests"]["nodes"]:
+        p["author"] = (p.get("author") or {}).get("login")
         prs.setdefault(p["headRefName"], p)
     info = lambda n, tip: dict(name=n, upstream="GitHub", track="", tip=tip)
     lanes = [dict(name=base, is_base=True, commits=base_commits, info=info(base, hs[0] if hs else ""), pr=prs.get(base), unpushed=set(),
@@ -502,7 +504,7 @@ def main(argv=None):
     ap.add_argument("--out", default="tools/gitdraw/output/repo-diagram.excalidraw")
     ap.add_argument("--max-commits", type=int, default=6, help="commits shown per lane before the rest collapse (default 6)")
     ap.add_argument("--cap", type=int, default=500, help="max commits per lane when everything is shown (default 500)")
-    ap.add_argument("--max-branches", type=int, default=10, help="most recently updated branches to draw (default 8)")
+    ap.add_argument("--max-branches", type=int, default=25, help="most recently updated branches to draw (default 8)")
     ap.add_argument("--full", action="store_true", help="one-off output: show all commits instead of collapsing")
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--serve", action="store_true", help="serve the interactive infinite-canvas viewer (viewer.html)")
@@ -527,21 +529,73 @@ def main(argv=None):
         print("LAYOUT PROBLEM:", p)
     return 2 if probs else 0
 
+def conflicts_local(repo, base_ref, ln):
+    """exact: a throwaway in-memory merge (git merge-tree) of the branch into base. Nothing in the repo changes."""
+    n = ln["name"]
+    changed = lines(git(repo, "diff", "--name-only", f"{base_ref}...{n}", check=False))
+    if not ln.get("ahead"):
+        return dict(state="merged", files=[], changed=changed, source="git")
+    r = subprocess.run(["git", "-C", repo, "merge-tree", "--write-tree", "--name-only", "--no-messages", base_ref, n], capture_output=True, text=True)
+    if r.returncode == 0:
+        return dict(state="clean", files=[], changed=changed, source="git")
+    if r.returncode == 1:
+        files = []
+        for l in r.stdout.split("\n")[1:]:
+            if not l:
+                break
+            files.append(l)
+        return dict(state="conflict", files=sorted(set(files)), changed=changed, source="git")
+    return dict(state="unknown", files=[], changed=changed, source="git")  # git older than 2.38
+
+def conflicts_github(owner, name, base, lanes):
+    """no clone, so: GitHub's own mergeable flag when the branch has a PR, else the files changed on BOTH sides since the fork point."""
+    from concurrent.futures import ThreadPoolExecutor
+    from urllib.parse import quote
+    def files(spec):
+        try:
+            return [f["filename"] for f in gh("api", f"repos/{owner}/{name}/compare/{quote(spec, safe='/.:')}")["files"]]
+        except (ValueError, KeyError):
+            return None
+    def one(ln):
+        if ln["is_base"]:
+            return None
+        if not ln["ahead"]:
+            return dict(state="merged", files=[], changed=[], source="files")
+        mine = files(f"{base}...{ln['name']}")
+        pr = ln["pr"]
+        if pr and pr["state"] == "OPEN" and pr.get("mergeable") in ("MERGEABLE", "CONFLICTING"):
+            st = "clean" if pr["mergeable"] == "MERGEABLE" else "conflict"
+            return dict(state=st, files=[], changed=mine or [], source="pr")
+        if mine is None:
+            return dict(state="unknown", files=[], changed=[], source="files")
+        if not ln["behind"]:
+            return dict(state="clean", files=[], changed=mine, source="files")
+        theirs = files(f"{ln['mb']}...{base}") if ln.get("mb") else None
+        if theirs is None:
+            return dict(state="unknown", files=[], changed=mine, source="files")
+        both = sorted(set(mine) & set(theirs))
+        return dict(state="possible" if both else "clean", files=both, changed=mine, source="files")
+    with ThreadPoolExecutor(8) as ex:
+        return list(ex.map(one, lanes))
+
 def graph(a, x):
     """current state of repo entry x as plain JSON for the viewer: one lane per branch, every commit up to the cap (the browser decides how many to show)."""
     only = set(a.branches.split(",")) if a.branches else None
     if x["kind"] == "github":  # API only, nothing cloned; GraphQL returns at most 100 commits per branch
         raw = fetch_github(x["owner"], x["repo"], 100, a.max_branches)
         base, lanes = lanes_github(raw, a.max_commits, True, 100, a.max_branches)
+        conf = conflicts_github(x["owner"], x["repo"], base, lanes)
     else:
-        base, _, lanes = collect(x["path"], a.base, only, a.max_commits, True, a.cap, a.max_branches)
+        base, base_ref, lanes = collect(x["path"], a.base, only, a.max_commits, True, a.cap, a.max_branches)
+        conf = [None if ln["is_base"] else conflicts_local(x["path"], base_ref, ln) for ln in lanes]
     out = []
-    for ln in lanes:
+    for ln, cf in zip(lanes, conf):
         info, pr = ln["info"], ln["pr"]
         out.append(dict(
             name=ln["name"], is_base=ln["is_base"], mb=ln.get("mb"), ahead=ln.get("ahead", 0), behind=ln.get("behind", 0),
-            more=ln["hidden"], upstream=info.get("upstream"), track=info.get("track", ""),
-            pr=dict(number=pr["number"], state=pr["state"], title=pr["title"]) if pr else None,
+            more=ln["hidden"], upstream=info.get("upstream"), track=info.get("track", ""), conflict=cf,
+            pr=dict(number=pr["number"], state=pr["state"], title=pr["title"], url=pr.get("url"), draft=bool(pr.get("isDraft")), mergeable=pr.get("mergeable"),
+                    review=pr.get("reviewDecision"), author=pr.get("author"), created=pr.get("createdAt"), base=pr.get("baseRefName")) if pr else None,
             commits=[dict(c, unpushed=c["hash"] in ln["unpushed"]) for c in ln["commits"]]))
     return dict(base=base, skipped=lanes[0].get("skipped", 0), lanes=out, ts=time.strftime("%Y-%m-%d %H:%M:%S"))
 
@@ -586,9 +640,9 @@ def serve(a, repo):
         return os.path.join(out, f"seen-{x['id']}.json")
     def hashes(g):
         return sorted({c["hash"] for ln in g["lanes"] for c in ln["commits"]})
-    def load(x, reload):
+    def load(x, reload, a2):
         """graph + the commits that appeared since the last explicit Reload (the baseline only moves on Reload)."""
-        g = graph(a, x)
+        g = graph(a2, x)
         prev = jload(seen_path(x), None)
         cur = hashes(g)
         g["fresh"] = [h for h in cur if prev is not None and h not in set(prev)]
@@ -643,7 +697,8 @@ def serve(a, repo):
                     return self.reply(dict(dirs=list_dirs(q.get("q", [""])[0])))
                 x = find(q.get("repo", [""])[0])
                 if u.path == "/api/graph":
-                    return self.reply(dict(repo=x["name"], id=x["id"], **load(x, post)))
+                    a2 = copy.copy(a); a2.max_branches = max(1, min(100, int(q.get("max", [a.max_branches])[0])))
+                    return self.reply(dict(repo=x["name"], id=x["id"], **load(x, post, a2)))
                 return self.reply(open(os.path.join(here, "viewer.html"), "rb").read(), "text/html; charset=utf-8")
             except (ValueError, OSError, subprocess.SubprocessError, SystemExit) as e:
                 self.reply({"error": str(e)}, code=400)
