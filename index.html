@@ -110,7 +110,7 @@
   .ci.success { background:var(--ok) } .ci.failure { background:var(--bad) } .ci.pending { background:#d4a006 }
   .more { position:absolute; width:256px; min-height:40px; border-radius:var(--pill); border:2px dashed; background:#fff; font:var(--t-label); display:flex; align-items:center; justify-content:center; gap:var(--s2); cursor:pointer }
   .more:hover { background:var(--fill) } .more.note { cursor:default; color:var(--muted); border-color:#c9c9d1; font:var(--t-caption); text-align:center; padding:var(--s2) var(--s3) } .more.note:hover { background:#fff }
-  .dim { opacity:.2 } .head,.card,.pr,.more { transition:opacity .25s }
+  .head,.card,.pr,.more { transition:opacity .25s }
 
   /* ===== Inspector: 400px wide, 24px padding, 24px between sections ===== */
   #side { top:var(--edge); right:var(--edge); bottom:calc(var(--edge) + var(--bar) + var(--s4)); width:400px; overflow:auto; display:none }
@@ -132,15 +132,12 @@
   .files,.checks { list-style:none; padding:0; border-radius:var(--r2); box-shadow:0 0 0 1px var(--line) inset; overflow:auto }
   .files { max-height:192px }
   .files li { padding:var(--s2) var(--s3); font:var(--t-code); border-bottom:1px solid var(--line); word-break:break-all } .files li:last-child,.checks li:last-child { border:0 }
-  .files li small { font:var(--t-caption); color:var(--muted) } .files li.hot { background:var(--badbg); color:#7f1d1d; font:var(--t-code-strong) } .files li.warm { background:var(--warnbg); color:#78350f }
+  .files li small { font:var(--t-caption); color:var(--muted) } .files li.clash { background:var(--badbg); color:#7f1d1d; font:var(--t-code-strong) }
   .checks li { display:flex; align-items:center; gap:var(--s2); padding:var(--s2) var(--s3); font:var(--t-body); border-bottom:1px solid var(--line) } .checks a { color:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:var(--s1) } .checks a:hover { text-decoration:underline }
   .link { color:var(--accent); font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:var(--s1) } .link:hover { text-decoration:underline }
   .cmd { display:flex; align-items:center; gap:var(--s2); background:#14141c; color:#e8e8f0; border-radius:var(--r2); padding:var(--s2) var(--s2) var(--s2) var(--s4); font:var(--t-code); margin-top:var(--s2) }
   .cmd span { flex:1; overflow-x:auto; white-space:nowrap } .cmd button { height:var(--c-sm); padding:0 var(--s3); border-radius:var(--r1); background:rgba(255,255,255,.1); color:#c9ccd6; font:var(--t-caption-strong); display:inline-flex; align-items:center; gap:var(--s1) } .cmd button:hover { background:rgba(255,255,255,.2) }
   .cmdnote { font:var(--t-caption); color:var(--muted); margin:var(--s1) 0 var(--s3) }
-  .hotrow { padding:var(--s3); border-radius:var(--r2); cursor:pointer; margin-bottom:var(--s2); box-shadow:0 0 0 1px var(--line) inset } .hotrow:hover { background:#fafafa } .hotrow.on { background:var(--warnbg); box-shadow:0 0 0 2px #f59e0b inset }
-  .hotrow code { font:var(--t-code-strong); word-break:break-all } .hotrow .who { margin-top:var(--s2); display:flex; gap:var(--s1); flex-wrap:wrap }
-  #hotList { max-height:50vh; overflow:auto; margin-top:var(--s3) }
 
   /* ===== Popovers: 360px wide, 16px padding, 12px gap, 16px above/below the button ===== */
   .pop { position:fixed; width:360px; padding:var(--s4); display:none; z-index:7 }
@@ -175,7 +172,7 @@
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-branch" viewBox="0 0 24 24"><line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></symbol><symbol id="i-pr" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" x2="6" y1="9" y2="21"/></symbol><symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol><symbol id="i-filter" viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol><symbol id="i-unfold" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></symbol><symbol id="i-fold" viewBox="0 0 24 24"><path d="m7 20 5-5 5 5"/><path d="m7 4 5 5 5-5"/></symbol><symbol id="i-fit" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol><symbol id="i-tidy" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol><symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></symbol><symbol id="i-github" viewBox="0 0 24 24"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol><symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol><symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></symbol><symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/></symbol></defs></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-branch" viewBox="0 0 24 24"><line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></symbol><symbol id="i-pr" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" x2="6" y1="9" y2="21"/></symbol><symbol id="i-filter" viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol><symbol id="i-unfold" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></symbol><symbol id="i-fold" viewBox="0 0 24 24"><path d="m7 20 5-5 5 5"/><path d="m7 4 5 5 5-5"/></symbol><symbol id="i-fit" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol><symbol id="i-tidy" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol><symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></symbol><symbol id="i-github" viewBox="0 0 24 24"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol><symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol><symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></symbol><symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/></symbol></defs></svg>
 <div id="viewport"><div id="world"><svg id="edges"></svg></div></div>
 <div id="empty"><div id="emptyMsg"></div></div>
 
@@ -187,7 +184,6 @@
 
 <div id="dock" class="float">
   <button class="tb" id="filtBtn" data-pop="filt"><svg class="i" aria-hidden="true"><use href="#i-filter"/></svg>Filters<span class="badge" id="filtN" style="display:none"></span></button>
-  <button class="tb" id="hotBtn" data-pop="hotpop"><svg class="i" aria-hidden="true"><use href="#i-flame"/></svg>Hot files<span class="badge" id="hotN" style="display:none"></span></button>
   <button class="tb" id="expAll"><svg class="i" aria-hidden="true"><use href="#i-unfold"/></svg>Expand all</button>
   <span class="sep"></span>
   <button class="tb primary" id="reload" title="Re-read the repo and mark what's new"><svg class="i" aria-hidden="true"><use href="#i-refresh"/></svg>Reload</button>
@@ -215,12 +211,6 @@
   <div class="frow"><label>Hide fully merged<small>Already inside the main line</small></label><button class="switch" id="fMerged" aria-label="Hide fully merged"></button></div>
   <div class="frow"><label>Only with conflicts<small>Would clash with the main line</small></label><button class="switch" id="fConf" aria-label="Only conflicting"></button></div>
   <p id="fSummary" class="note"></p>
-</div>
-
-<div id="hotpop" class="float pop caret">
-  <h3><svg class="i" aria-hidden="true"><use href="#i-flame"/></svg>Hot files</h3>
-  <p class="note" style="margin:0">Changed on <b>more than one</b> branch, so these are where branches can collide. Click a file to highlight its branches.</p>
-  <div id="hotList"></div>
 </div>
 
 <div id="help" class="float">
@@ -278,15 +268,17 @@ const ageDays = ln => ln.commits.length ? (nowS() - ln.commits[0].ct) / DAY : 0;
 
 // ---------- state ----------
 let view = { x: 120, y: 100, k: 1 }, data = null, repos = [], cur = store.get('gc-repo', null), L = null, selKey = null;
-let HOT = [], hotFile = null;
+let laneOrder = [];  // user's column order (names), set by dragging a branch title
 let expanded = new Set(), offs = {}, flt = { max: 25, stale: 0, merged: false, conf: false, ...store.get('gc-filters', {}) };
-const expKey = () => 'gc-exp-' + cur, offKey = () => 'gc-off-' + cur;
+const expKey = () => 'gc-exp-' + cur, offKey = () => 'gc-off-' + cur, ordKey = () => 'gc-order-' + cur;
 
 // ---------- layout (pure function of data + filters + expanded) ----------
 function layout() {
   let lanes = data.lanes.map((ln, i) => ({ ...ln, i }));
   lanes = lanes.filter(ln => ln.is_base || (
     (!flt.stale || ageDays(ln) < flt.stale) && (!flt.merged || ln.ahead > 0) && (!flt.conf || (ln.conflict && (ln.conflict.state === 'conflict' || ln.conflict.state === 'possible')))));
+  const rank = l => { const k = laneOrder.indexOf(l.name); return k >= 0 ? k : 1e6 + l.i; };
+  lanes = [lanes[0], ...lanes.slice(1).sort((a, b) => rank(a) - rank(b))];  // main line stays first; the rest follow the order you dragged them into
   lanes.forEach((ln, i) => { ln.col = i; ln.color = ln.is_base ? BASE_COLOR : COLORS[(ln.i - 1) % COLORS.length]; ln.x = i * COLX; ln.stale = !ln.is_base && flt.staleMark && ageDays(ln) > 90; });
   const base = lanes[0], baseIdx = Object.fromEntries(base.commits.map((c, i) => [c.hash, i]));
   for (const ln of lanes) {
@@ -302,11 +294,19 @@ function layout() {
   }
   const owner = {}, byHash = {};
   for (const ln of lanes) for (const c of ln.shown) if (!owner[c.hash]) { owner[c.hash] = ln; byHash[c.hash] = c; }
+  // A collapsed branch hides its older commits. Count that hidden run as ONE virtual "fold" row, so the branch stays attached to its
+  // fork point in both states. (Without it the visible commits lose their parent, drop to the bottom, and jump when expanded.)
+  const foldOf = {};
+  for (const ln of lanes) if (ln.hiddenLocal > 0 && ln.shown.length) {
+    const id = '~fold:' + ln.name, oldest = ln.shown[ln.shown.length - 1];
+    owner[id] = ln; byHash[id] = { hash: id, ct: oldest.ct - 1, parents: ln.mb && ln.mb in owner ? [ln.mb] : [] }; foldOf[oldest.hash] = id;
+  }
+  const rpar = h => foldOf[h] ? [foldOf[h], ...byHash[h].parents.slice(1)] : byHash[h].parents;
   const order = [], seen = new Set();
-  const visit = h => { if (!(h in owner) || seen.has(h)) return; seen.add(h); byHash[h].parents.forEach(visit); order.push(h); };
+  const visit = h => { if (!(h in owner) || seen.has(h)) return; seen.add(h); rpar(h).forEach(visit); order.push(h); };
   Object.keys(owner).sort((a, b) => byHash[a].ct - byHash[b].ct).forEach(visit);
   const row = {}, last = new Map(lanes.map(l => [l, -1]));
-  for (const h of order) { const ln = owner[h]; row[h] = Math.max(last.get(ln) + 1, ...byHash[h].parents.filter(p => p in row).map(p => row[p] + 1)); last.set(ln, row[h]); }
+  for (const h of order) { const ln = owner[h]; row[h] = Math.max(last.get(ln) + 1, ...rpar(h).filter(p => p in row).map(p => row[p] + 1)); last.set(ln, row[h]); }
   const maxRow = Math.max(0, ...Object.values(row));
   const y0 = 296;  // room above the newest row for titles and PR cards
   const items = {};  // key -> {key, kind, lane, x, y, w, h, ...}
@@ -339,23 +339,36 @@ const rectOf = it => { const p = pos(it); return { x: p.x, y: p.y, w: it.w, h: i
 // ---------- drawing ----------
 let els = {}, tweenId = 0;
 const clearBoard = () => { tweenId++; OV = {}; world.querySelectorAll('.head,.card,.pr,.more').forEach(n => n.remove()); els = {}; edges.innerHTML = ''; };
-function tween(from) {
+function tween(from, anchor) {
   const id = ++tweenId, t0 = performance.now(), D = 340, items = Object.values(L.items).filter(it => from[it.key]);
   const step = now => {
     if (id !== tweenId) return;
     const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 3);
     OV = {};
     if (k < 1) for (const it of items) { const f = from[it.key], t = truePos(it); OV[it.key] = { x: f.x + (t.x - f.x) * e, y: f.y + (t.y - f.y) * e }; }
+    if (anchor && L.items[anchor.key]) {  // hold the anchor still on screen: pan the view by however far it would have moved
+      const pt = OV[anchor.key] || truePos(L.items[anchor.key]);
+      view.x = anchor.v0.x + (anchor.p0.x - pt.x) * view.k; view.y = anchor.v0.y + (anchor.p0.y - pt.y) * view.k; applyView();
+    }
     Object.values(L.items).forEach(place); drawEdges();
     if (k < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
 }
-function draw(animate = true) {
-  const old = {};
+function draw(animate = true, anchorKey = null, mutate = null) {
+  const old = {}, v0 = { x: view.x, y: view.y };
   if (L && animate) for (const it of Object.values(L.items)) old[it.key] = pos(it);
   OV = {};
+  if (mutate) mutate();  // state changes that should animate from the positions captured above
   L = layout();
+  let anchor = null;  // the thing you acted on (else whatever is nearest the screen centre) stays put on screen
+  if (animate && Object.keys(old).length) {
+    const cx = (vp.clientWidth / 2 - view.x) / view.k, cy = (vp.clientHeight / 2 - view.y) / view.k;
+    const cand = anchorKey && old[anchorKey] && L.items[anchorKey] ? [anchorKey] : Object.keys(old).filter(k => L.items[k]);
+    let best = null, bd = 1e18;
+    for (const k of cand) { const p = old[k], d = Math.hypot(p.x + L.items[k].w / 2 - cx, p.y + L.items[k].h / 2 - cy); if (d < bd) { bd = d; best = k; } }
+    if (best) anchor = { key: best, p0: old[best], v0 };
+  }
   const frag = document.createDocumentFragment(), fresh = new Set(data.fresh || []), seenKeys = new Set(), created = [];
   const mk = (it, cls, html) => {
     let d = els[it.key];
@@ -395,9 +408,9 @@ function draw(animate = true) {
   if (selKey && els[selKey]) els[selKey].classList.add('sel');
   if (Object.keys(old).length) {
     created.forEach(d => { d.style.opacity = 0; requestAnimationFrame(() => requestAnimationFrame(() => d.style.opacity = '')); });
-    tween(old);
+    tween(old, anchor);
   }
-  drawEdges(); computeHot(); applyDim();
+  drawEdges();
   $('empty').style.display = 'none';
 }
 const tagsHtml = h => { const t = (data.tags || {})[h]; if (!t) return ''; const more = t.length > 2 ? `<span class="tagchip">+${t.length - 2}</span>` : ''; return `<div class="tags">${t.slice(0, 2).map(n => `<span class="tagchip" title="Tag: ${esc(n)}">${ico('tag', 'xs')}${esc(n)}</span>`).join('')}${more}</div>`; };
@@ -424,11 +437,7 @@ function drawEdges() {
     for (let i = 0; i < chain.length - 1; i++) vert(chain[i + 1], chain[i], ln.color, 3, i === 0 && chain.length === 3 ? null : null);
     if (ln.moreItem && ln.cards.length) vert(ln.moreItem, ln.cards.reduce((m, k) => k.y > m.y ? k : m), '#b8bcc6', 2.5, '4 5');
   }
-  for (const k of Object.values(L.items)) if (k.kind === 'card') k.c.parents.forEach((p, idx) => {
-    const par = L.at[p]; if (!par) return;
-    const child = k;
-    if (child.ln === par.ln) { vert(par, child, child.ln.color, 3); return; }
-    const isMerge = idx > 0 || child.ln.is_base, color = isMerge ? par.ln.color : child.ln.color, dash = isMerge ? '' : 'stroke-dasharray="7 6"';
+  const link = (child, par, color, dash, idx) => {  // cross-branch connector (fork, merge, or collapsed-history)
     const C = rectOf(child), P = rectOf(par);
     if (isMoved(child) || isMoved(par)) {  // free-form: smooth curve
       const right = P.x > C.x, ax = C.x + (right ? C.w : 0), bx = P.x + (right ? 0 : P.w), ay = C.y + C.h / 2, by = P.y + P.h / 2, mx = (ax + bx) / 2;
@@ -441,7 +450,14 @@ function drawEdges() {
     const pts = [[ax, ay], [gx1 + dir * o, ay], [gx1 + dir * o, gy], [gx2 - dir * o, gy], [gx2 - dir * o, by], [bx, by]];
     out += `<path d="${rounded(pts, 12)}" stroke="${color}" stroke-width="2.5" fill="none" ${dash} stroke-linecap="round" stroke-linejoin="round"/>`;
     out += `<circle cx="${ax}" cy="${ay}" r="4.5" fill="${color}"/><circle cx="${bx}" cy="${by}" r="4.5" fill="${color}"/>`;
+  };
+  for (const k of Object.values(L.items)) if (k.kind === 'card') k.c.parents.forEach((p, idx) => {
+    const par = L.at[p]; if (!par) return;
+    if (k.ln === par.ln) { vert(par, k, k.ln.color, 3); return; }
+    const isMerge = idx > 0 || k.ln.is_base;
+    link(k, par, isMerge ? par.ln.color : k.ln.color, isMerge ? '' : 'stroke-dasharray="7 6"', idx);
   });
+  for (const ln of L.lanes) if (ln.moreItem && ln.hiddenLocal > 0 && ln.mb && L.at[ln.mb] && L.at[ln.mb].ln !== ln) link(ln.moreItem, L.at[ln.mb], ln.color, 'stroke-dasharray="2 6"', 0);
   edges.innerHTML = out; edges.setAttribute('width', 1); edges.setAttribute('height', 1);
 }
 
@@ -449,17 +465,12 @@ function drawEdges() {
 const cmd = c => `<div class="cmd"><span>${esc(c)}</span><button data-copy="${esc(c)}">${ico('copy', 'xs')}Copy</button></div>`;
 const kvRow = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
 const laneChip = ln => `<a class="pill link" data-lane="${esc(ln.name)}" style="background:${tint(ln.color, .16)};color:${ln.color};text-decoration:none">${ico('branch', 'xs')}${esc(ln.name)}</a>`;
-const fileList = (files, hot = [], warm = {}) => files.length ? `<ul class="files">${files.slice(0, 80).map(f => `<li class="${hot.includes(f) ? 'hot' : warm[f] ? 'warm' : ''}">${esc(f)}${warm[f] && !hot.includes(f) ? `<small> · also in ${esc(warm[f])}</small>` : ''}</li>`).join('')}${files.length > 80 ? `<li>…and ${files.length - 80} more</li>` : ''}</ul>` : '';
+const fileList = (files, clash = []) => files.length ? `<ul class="files">${files.slice(0, 80).map(f => `<li class="${clash.includes(f) ? 'clash' : ''}">${esc(f)}</li>`).join('')}${files.length > 80 ? `<li>…and ${files.length - 80} more</li>` : ''}</ul>` : '';
 function checksSection(ci) {
   if (!ci || !ci.checks) return '';
   const c = CI[ci.state], bad = ci.checks.filter(k => k.state === 'failure').length;
   return `<h4>Checks (CI)</h4><div class="callout ${c[2]}" style="margin:0 0 8px"><b class="t">${ico(c[0])}${ci.state === 'failure' ? bad + ' failing' : c[1]}</b>${ci.state === 'failure' ? 'Automated tests or builds failed on the newest commit. Fix before merging.' : ci.state === 'pending' ? 'Checks are still running on the newest commit.' : 'All automated checks passed on the newest commit.'}</div>`
     + (ci.checks.length ? `<ul class="checks">${ci.checks.map(k => `<li>${ciDot({ state: k.state })}${k.url ? `<a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(k.name)}${ico('external', 'xs')}</a>` : esc(k.name)}</li>`).join('')}</ul>` : '');
-}
-function sharedFiles(ln) {  // files this branch changes that other (unmerged) branches also change
-  const out = {};
-  for (const h of HOT) if (h.lanes.includes(ln)) out[h.file] = h.lanes.filter(x => x !== ln).map(x => x.name).join(', ');
-  return out;
 }
 function conflictCallout(ln, list = true) {
   const cf = ln.conflict, base = data.base; if (!cf || ln.is_base) return '';
@@ -506,13 +517,11 @@ function inspect(key) {
       why = `<div class="callout info">${p.filter(Boolean).join('<br><br>') || 'Identical to ' + esc(base)}</div>`;
     }
     const stale = !ln.is_base && ageDays(ln) > 30 ? `<div class="callout warn"><b class="t">${ico('clock')}Stale</b>Last commit ${ago(ln.commits[0].ct)}. If it's abandoned or merged, consider deleting it.</div>` : '';
-    const warm = ln.is_base ? {} : sharedFiles(ln), nw = Object.keys(warm).length, others = [...new Set(Object.values(warm).flatMap(v => v.split(', ')))];
-    const hotCallout = nw ? `<div class="callout warn"><b class="t">${ico('flame')}${nw} shared file${nw > 1 ? 's' : ''}</b>Also being changed on <b>${others.map(esc).join(', ')}</b>. Whichever lands second may hit a conflict.</div>` : '';
-    const filesHtml = cf && cf.changed.length ? `<h4>Files changed on this branch (${cf.changed.length})</h4><div class="cmdnote" style="margin:0 0 8px">${cf.files.length ? '<b style="color:var(--bad)">Red</b> clashes with ' + esc(data.base) + '. ' : ''}${nw ? '<b style="color:var(--warn)">Amber</b> is also changed on another branch.' : ''}</div>${fileList(cf.changed, cf.files, warm)}` : '';
+    const filesHtml = cf && cf.changed.length ? `<h4>Files changed on this branch (${cf.changed.length})</h4><div class="cmdnote" style="margin:0 0 8px">${cf.files.length ? '<b style="color:var(--bad)">Red</b> clashes with ' + esc(data.base) + '. ' : ''}</div>${fileList(cf.changed, cf.files)}` : '';
     const cmds = ln.is_base ? '' : `<h4>Try it</h4>${ln.ahead ? cmd(`git checkout ${base} && git merge ${ln.name}`) + '<div class="cmdnote">Merge this branch into ' + esc(base) + '.</div>' : ''}${ln.behind ? cmd(`git checkout ${ln.name} && git merge ${base}`) + '<div class="cmdnote">Bring this branch up to date. This is where you\'d resolve conflicts.</div>' : ''}${cmd(`git log ${base}..${ln.name} --oneline`)}<div class="cmdnote">List the commits only this branch has.</div>`;
     body = `${ln.is_base ? '' : `<div class="stats"><div class="stat"><b style="color:${ln.color}">${ln.ahead}</b><span>commits ahead</span></div><div class="stat"><b>${ln.behind}</b><span>commits behind</span></div></div>${tot ? `<div class="bar"><i style="width:${ln.ahead / tot * 100}%;background:${ln.color}"></i><i style="flex:1;background:${BASE_COLOR};opacity:.45"></i></div>` : ''}`}
       <dl class="kv">${kvRow('Remote', ln.upstream ? esc(ln.upstream) + (ln.track ? ` <i style="color:var(--muted)">(${esc(ln.track)})</i>` : '') : '<span style="color:var(--muted)">none (local only)</span>')}${ln.commits.length ? kvRow('Updated', ago(ln.commits[0].ct)) : ''}${ln.pr ? kvRow('PR', `<a class="link" data-key="pr:${esc(ln.name)}">#${ln.pr.number}</a> <span class="pill" style="background:${(PRS[prState(ln.pr)] || PRS.OPEN)[1]};color:${(PRS[prState(ln.pr)] || PRS.OPEN)[0]}">${(PRS[prState(ln.pr)] || PRS.OPEN)[2]}</span>`) : ''}</dl>
-      ${why}${stale}${conflictCallout(ln, false)}${hotCallout}${checksSection(ln.ci)}${filesHtml}${cmds}`;
+      ${why}${stale}${conflictCallout(ln, false)}${checksSection(ln.ci)}${filesHtml}${cmds}`;
   }
   s.innerHTML = band + `<div class="body">${body}</div>`; s.classList.add('open'); document.body.classList.add('side'); s.scrollTop = 0;
 }
@@ -531,33 +540,8 @@ function focusKey(key, select) {
   view.x = W / 2 - (r.x + r.w / 2) * view.k; view.y = vp.clientHeight / 2 - (r.y + r.h / 2) * view.k; applyView();
 }
 
-// ---------- hot files ----------
-function computeHot() {
-  const m = {};
-  for (const ln of L.lanes) if (!ln.is_base && ln.conflict && ln.conflict.state !== 'merged') for (const f of ln.conflict.changed || []) (m[f] ||= []).push(ln);
-  HOT = Object.entries(m).filter(([, l]) => l.length > 1).map(([file, lanes]) => ({ file, lanes })).sort((a, b) => b.lanes.length - a.lanes.length || a.file.localeCompare(b.file));
-  if (hotFile && !HOT.some(h => h.file === hotFile)) hotFile = null;
-  $('hotN').style.display = HOT.length ? '' : 'none'; $('hotN').textContent = HOT.length;
-  if ($('hotpop').classList.contains('open')) renderHot();
-}
-function renderHot() {
-  $('hotList').innerHTML = HOT.length ? HOT.slice(0, 60).map(h => `<div class="hotrow${h.file === hotFile ? ' on' : ''}" data-file="${esc(h.file)}"><code>${esc(h.file)}</code><div class="who">${h.lanes.map(l => `<a class="pill link" data-lane="${esc(l.name)}" style="background:${tint(l.color, .16)};color:${l.color};text-decoration:none">${ico('branch', 'xs')}${esc(l.name)}</a>`).join('')}</div></div>`).join('')
-    : '<p>No file is being changed by more than one branch right now.</p>';
-}
-function applyDim() {
-  const keep = hotFile ? new Set((HOT.find(h => h.file === hotFile) || { lanes: [] }).lanes.map(l => l.name)) : null;
-  for (const it of Object.values(L.items)) { const d = els[it.key]; if (d) d.classList.toggle('dim', !!keep && !it.ln.is_base && !keep.has(it.ln.name)); }
-}
-$('hotBtn').onclick = () => { if (togglePop($('hotpop'), $('hotBtn'), true)) { renderHot(); anchorPop($('hotpop'), $('hotBtn'), true); } };
-$('hotList').onclick = e => {
-  const l = e.target.closest('[data-lane]');
-  if (l) { const ln = L.lanes.find(x => x.name === l.dataset.lane); if (ln) { e.stopPropagation(); focusKey(ln.headItem.key, true); } return; }
-  const r = e.target.closest('[data-file]'); if (!r) return;
-  hotFile = hotFile === r.dataset.file ? null : r.dataset.file; renderHot(); applyDim();
-};
-
 // ---------- expand / filters ----------
-const toggleLane = name => { expanded.has(name) ? expanded.delete(name) : expanded.add(name); store.set(expKey(), [...expanded]); draw(); };
+const toggleLane = name => { expanded.has(name) ? expanded.delete(name) : expanded.add(name); store.set(expKey(), [...expanded]); draw(true, 'more:' + name); };
 $('expAll').onclick = () => {
   const all = L.lanes.every(l => expanded.has(l.name) || l.commits.length <= START);
   expanded = all ? new Set() : new Set(data.lanes.map(l => l.name));
@@ -614,7 +598,7 @@ const fit = () => {
 const goNewest = () => { const b = bounds(); view.k = Math.max(.8, Math.min(1, (vp.clientWidth - 150) / (b.x1 - b.x0))); view.x = 96 - b.x0 * view.k; view.y = 136 - b.y0 * view.k; applyView(); };
 const zoomAt = (cx, cy, k) => { k = Math.min(2.5, Math.max(.08, k)); view.x = cx - (cx - view.x) * (k / view.k); view.y = cy - (cy - view.y) * (k / view.k); view.k = k; applyView(); };
 $('tFit').onclick = fit;
-$('tTidy').onclick = () => { offs = {}; store.set(offKey(), {}); draw(); toast('Everything is back in place'); };
+$('tTidy').onclick = () => { draw(true, null, () => { offs = {}; laneOrder = []; store.set(offKey(), {}); store.set(ordKey(), []); }); toast('Everything is back in place'); };
 $('tHelp').onclick = () => { closePops(); $('help').classList.toggle('open'); };
 $('zi').onclick = () => zoomAt(vp.clientWidth / 2, vp.clientHeight / 2, view.k * 1.25);
 $('zo').onclick = () => zoomAt(vp.clientWidth / 2, vp.clientHeight / 2, view.k / 1.25);
@@ -626,7 +610,7 @@ vp.addEventListener('wheel', e => {
 }, { passive: false });
 window.addEventListener('keydown', e => {
   if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
-  if (e.key === 'f') fit(); else if (e.key === 'n') goNewest(); else if (e.key === 't') $('tTidy').click(); else if (e.key === '?') $('tHelp').click(); else if (e.key === 'Escape') { deselect(); closePops(); hotFile = null; applyDim(); $('help').classList.remove('open'); }
+  if (e.key === 'f') fit(); else if (e.key === 'n') goNewest(); else if (e.key === 't') $('tTidy').click(); else if (e.key === '?') $('tHelp').click(); else if (e.key === 'Escape') { deselect(); closePops(); $('help').classList.remove('open'); }
 });
 
 // ---------- pointer: pan canvas, drag cards, drag a whole branch by its title ----------
@@ -635,7 +619,7 @@ vp.addEventListener('pointerdown', e => {
   const t = e.target.closest('.card,.pr,.head');
   if (e.button !== 0) return;
   closePops(); $('help').classList.remove('open');
-  if (!t) { if (e.target.closest('.more')) return; if (hotFile) { hotFile = null; applyDim(); } pan = { x: e.clientX - view.x, y: e.clientY - view.y, sx: e.clientX, sy: e.clientY }; return; }
+  if (!t) { if (e.target.closest('.more')) return; pan = { x: e.clientX - view.x, y: e.clientY - view.y, sx: e.clientX, sy: e.clientY }; return; }
   const key = t.dataset.key, it = L.items[key], offKeyName = it.kind === 'head' ? 'L:' + it.ln.name : key;
   drag = { key, it, el: t, name: offKeyName, sx: e.clientX, sy: e.clientY, o: [...off(offKeyName)], moved: false };
   e.preventDefault();
@@ -654,7 +638,11 @@ window.addEventListener('pointerup', e => {
   if (pan) { if (Math.hypot(e.clientX - pan.sx, e.clientY - pan.sy) < 4) deselect(); pan = null; vp.classList.remove('drag'); }
   if (drag) {
     const d = drag; drag = null; d.el.classList.remove('dragging');
-    if (d.moved) store.set(offKey(), offs); else if (d.it.kind !== 'more') inspect(d.key);
+    if (d.moved && d.it.kind === 'head') {  // dropping a branch title reorders the columns: it snaps into the nearest slot, so branches can never overlap
+      const ln = d.it.ln, cx = ln.x + off('L:' + ln.name)[0], names = L.lanes.slice(1).map(l => l.name).filter(n => n !== ln.name);
+      names.splice(Math.max(0, Math.min(names.length, Math.round(cx / COLX) - 1)), 0, ln.name);
+      draw(true, null, () => { laneOrder = [...names, ...laneOrder.filter(n => !names.includes(n))]; store.set(ordKey(), laneOrder); delete offs['L:' + ln.name]; store.set(offKey(), offs); });
+    } else if (d.moved) store.set(offKey(), offs); else if (d.it.kind !== 'more') inspect(d.key);
   }
 });
 
@@ -672,7 +660,7 @@ const openRepo = async reload => {
   try {
     const d = await api(`api/graph?repo=${encodeURIComponent(cur)}&max=${flt.max}`, { method: reload ? 'POST' : 'GET' });
     data = d; data.github = (repos.find(r => r.id === cur) || {}).kind === 'github';
-    expanded = new Set(store.get(expKey(), [])); offs = store.get(offKey(), {}); deselect(); closePops();
+    expanded = new Set(store.get(expKey(), [])); offs = store.get(offKey(), {}); laneOrder = store.get(ordKey(), []); for (const k of Object.keys(offs)) if (k.startsWith('L:')) delete offs[k];  // columns are reordered now, not free-floated deselect(); closePops();
     clearBoard(); draw(false); syncFilters(); updateStatus(); goNewest();
     $('empty').style.display = 'none'; setExp(false);
   } catch (e) { $('status').textContent = 'error: ' + e.message; showEmpty(esc(e.message)); }

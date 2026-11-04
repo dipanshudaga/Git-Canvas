@@ -34,4 +34,4 @@ Never set `font-size` or `font-weight` directly; use `font: var(--t-...)`.
 ## Icons
 One stroke set (Lucide-style, 24px grid, 2px stroke, round caps) in an inline SVG sprite. Use `ico('name')` in JS or `<svg class="i"><use href="#i-name"/></svg>` in HTML. Sizes: `.xs` 12 (inside chips) · default 16 (buttons, rows) · `.lg` 20 (icon-only buttons). Colour comes from `currentColor`. No emoji or text glyphs as icons.
 
-Available: branch, pr, flame, filter, refresh, unfold, fold, fit, tidy, plus, minus, help, x, check, chevron-down, chevron-up, alert, clock, tag, github, folder, copy, external, arrow-up, arrow-down, dots.
+Available: branch, pr, filter, refresh, unfold, fold, fit, tidy, plus, minus, help, x, check, chevron-down, chevron-up, alert, clock, tag, github, folder, copy, external, arrow-up, arrow-down, dots.

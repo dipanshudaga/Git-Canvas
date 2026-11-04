@@ -1,6 +1,6 @@
 # Git Canvas
 
-See any GitHub repo as a map on an infinite canvas: branches as columns, commits as cards, merges, conflicts, pull requests, CI, tags and "hot files" (files several branches are touching).
+See any GitHub repo as a map on an infinite canvas: branches as columns, commits as cards, merges, conflicts, pull requests, CI and tags.
 
 ## Use it online (GitHub Pages)
 
