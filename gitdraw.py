@@ -69,7 +69,7 @@ def commits_of(repo, ref, exclude=None, limit=None):
 def pull_prs(repo):
     try:
         r = subprocess.run(["gh", "pr", "list", "--state", "all", "--limit", "100", "--json",
-                            "number,title,state,headRefName,baseRefName,url,isDraft,mergeable,reviewDecision,author,createdAt"], cwd=repo, capture_output=True, text=True, timeout=20)
+                            "number,title,state,headRefName,baseRefName,url,isDraft,mergeable,reviewDecision,author,createdAt,statusCheckRollup"], cwd=repo, capture_output=True, text=True, timeout=20)
         if r.returncode:
             return {}
         prs = {}
@@ -77,8 +77,8 @@ def pull_prs(repo):
             p["author"] = (p.get("author") or {}).get("login")
             prs.setdefault(p["headRefName"], p)
         return prs
-    except (OSError, ValueError, subprocess.SubprocessError):
-        return {}
+    except (OSError, ValueError, TypeError, AttributeError, KeyError, subprocess.SubprocessError):
+        return {}  # PRs are optional: never let a odd `gh` reply break the graph
 
 def collect(repo, base, only, limit, full=False, cap=500, max_branches=8):
     """full=False: newest `limit` commits per lane (rest collapsed); full=True: up to `cap` per lane."""
@@ -129,29 +129,93 @@ def collect(repo, base, only, limit, full=False, cap=500, max_branches=8):
     return base, base_ref, lanes
 
 # ---------- GitHub (API, no clone) ----------
-GQL = """query($o:String!,$n:String!,$c:Int!,$b:Int!,$base:String!){repository(owner:$o,name:$n){
- refs(refPrefix:"refs/heads/",first:$b,orderBy:{field:TAG_COMMIT_DATE,direction:DESC}){totalCount nodes{name compare(headRef:$base){aheadBy behindBy} target{...C}}}
- base:ref(qualifiedName:$base){target{...C}}
- pullRequests(first:100,orderBy:{field:UPDATED_AT,direction:DESC}){nodes{number title state headRefName baseRefName url isDraft mergeable reviewDecision createdAt author{login}}}}}
-fragment C on Commit{oid history(first:$c){totalCount nodes{oid abbreviatedOid messageHeadline committedDate author{name} parents(first:2){nodes{oid}}}}}"""
+CI_FIELDS = "statusCheckRollup{state contexts(first:25){nodes{__typename ... on CheckRun{name conclusion status detailsUrl} ... on StatusContext{context state targetUrl}}}}"
+# GitHub times out on one huge query (100 commits x many branches + compare), which surfaces as "unexpected end of JSON input".
+# So: a cheap list query, PRs on their own, commit history in small parallel batches, ahead/behind via the REST compare endpoint.
+GQL_LIST = """query($o:String!,$n:String!,$b:Int!,$base:String!){repository(owner:$o,name:$n){
+ refs(refPrefix:"refs/heads/",first:$b,orderBy:{field:TAG_COMMIT_DATE,direction:DESC}){totalCount nodes{name target{oid ... on Commit{%s}}}}
+ base:ref(qualifiedName:$base){target{oid ... on Commit{%s}}}
+ tags:refs(refPrefix:"refs/tags/",first:100,orderBy:{field:TAG_COMMIT_DATE,direction:DESC}){nodes{name target{oid ... on Tag{target{oid}}}}}}}""" % (CI_FIELDS, CI_FIELDS)
+GQL_PRS = """query($o:String!,$n:String!){repository(owner:$o,name:$n){
+ pullRequests(first:100,orderBy:{field:UPDATED_AT,direction:DESC}){nodes{number title state headRefName baseRefName url isDraft mergeable reviewDecision createdAt author{login}}}}}"""
+GQL_HIST = "fragment H on Commit{oid history(first:$c){totalCount nodes{oid abbreviatedOid messageHeadline committedDate author{name} parents(first:2){nodes{oid}}}}}"
 
-def gh(*args):
-    try:
-        r = subprocess.run(["gh", *args], capture_output=True, text=True, timeout=60)
-    except (OSError, subprocess.SubprocessError):
-        raise ValueError("GitHub repos are read through the `gh` CLI - install it and run `gh auth login`")
-    if r.returncode:
-        raise ValueError(("GitHub: " + (r.stderr.strip() or r.stdout.strip()))[:240])
-    return json.loads(r.stdout)
+def gh(*args, tries=2):
+    last = "unknown error"
+    for i in range(tries):
+        try:
+            r = subprocess.run(["gh", *args], capture_output=True, text=True, timeout=90)
+        except FileNotFoundError:
+            raise ValueError("GitHub repos are read through the `gh` CLI - install it and run `gh auth login`")
+        except (OSError, subprocess.SubprocessError):
+            last = "request timed out"; continue
+        if r.returncode:
+            last = r.stderr.strip() or r.stdout.strip() or "gh failed"
+            if "auth" in last.lower() or "404" in last or "Could not resolve" in last:
+                break  # retrying will not help
+            time.sleep(1); continue
+        try:
+            return json.loads(r.stdout)
+        except ValueError:
+            last = "GitHub sent an empty or cut-off reply"; time.sleep(1)
+    raise ValueError(("GitHub: " + last)[:240])
+
+def gql(query, **vars):
+    args = ["api", "graphql", "-f", f"query={query}"]
+    for k, v in vars.items():
+        args += ["-F" if isinstance(v, int) else "-f", f"{k}={v}"]
+    q = gh(*args)
+    if q.get("errors") and not q.get("data"):
+        raise ValueError("GitHub: " + q["errors"][0]["message"])
+    return q["data"]["repository"]
 
 def fetch_github(owner, name, cap=100, max_branches=8):
-    """one GraphQL round-trip: default-branch history + most recently updated branches + PRs. cap <= 100."""
+    """default-branch history + most recently updated branches + PRs + tags + CI + ahead/behind, as many small calls (cap <= 100 commits per branch)."""
+    from concurrent.futures import ThreadPoolExecutor
+    from urllib.parse import quote
     base = gh("api", f"repos/{owner}/{name}")["default_branch"]
-    q = gh("api", "graphql", "-f", f"query={GQL}", "-f", f"o={owner}", "-f", f"n={name}", "-F", f"c={min(cap, 100)}",
-           "-F", f"b={max_branches + 2}", "-f", f"base={base}")
-    if q.get("errors"):
-        raise ValueError("GitHub: " + q["errors"][0]["message"])
-    return dict(base=base, repo=q["data"]["repository"])
+    repo = gql(GQL_LIST, o=owner, n=name, b=min(100, max_branches + 2), base=base)
+    if not repo.get("base"):
+        raise ValueError(f"GitHub: default branch '{base}' not found")
+    try:
+        repo["pullRequests"] = gql(GQL_PRS, o=owner, n=name)["pullRequests"]
+    except ValueError:  # PRs are a bonus, never fatal
+        repo["pullRequests"] = dict(nodes=[])
+    nodes = repo["refs"]["nodes"]
+    tips = [repo["base"]["target"]] + [b["target"] for b in nodes]
+    oids = list(dict.fromkeys(t["oid"] for t in tips))
+    empty = dict(totalCount=0, nodes=[])
+    def hist(chunk, c):
+        body = " ".join(f'h{i}:object(oid:"{o}"){{...H}}' for i, o in enumerate(chunk))
+        d = gql("query($o:String!,$n:String!,$c:Int!){repository(owner:$o,name:$n){" + body + "}} " + GQL_HIST, o=owner, n=name, c=c)
+        return {o: (d.get(f"h{i}") or {}).get("history", empty) for i, o in enumerate(chunk)}
+    def batch(chunk):
+        try:
+            return hist(chunk, min(cap, 100))
+        except ValueError:  # too heavy: go one by one with fewer commits
+            out = {}
+            for o in chunk:
+                try:
+                    out.update(hist([o], min(cap, 30)))
+                except ValueError:
+                    out[o] = empty
+            return out
+    chunks = [oids[i:i + 4] for i in range(0, len(oids), 4)]
+    hmap = {}
+    with ThreadPoolExecutor(4) as ex:
+        for part in ex.map(batch, chunks):
+            hmap.update(part)
+    for t in tips:
+        t["history"] = hmap.get(t["oid"], empty)
+    def cmp_(b):
+        try:
+            c = gh("api", f"repos/{owner}/{name}/compare/{quote(base, safe='')}...{quote(b['name'], safe='')}?per_page=1")
+            b["rest"] = dict(ahead=c["ahead_by"], behind=c["behind_by"], files=[f["filename"] for f in c.get("files", [])], mb=(c.get("merge_base_commit") or {}).get("sha"))
+        except (ValueError, KeyError):
+            b["rest"] = None
+    with ThreadPoolExecutor(8) as ex:
+        list(ex.map(cmp_, [b for b in nodes if b["name"] != base]))
+    return dict(base=base, repo=repo)
 
 def _commit(n):
     ct = datetime.datetime.fromisoformat(n["committedDate"].replace("Z", "+00:00")).timestamp()
@@ -184,8 +248,8 @@ def lanes_github(raw, limit, full, cap, max_branches=8):
             if c["hash"] in hset:
                 mb = c["hash"]; break
             cs.append(c)
-        cmp_ = b["compare"] or {"aheadBy": 0, "behindBy": 0}
-        br.append((b, cs, mb, cmp_["behindBy"], cmp_["aheadBy"]))  # Ref.compare is base=branch, head=default: swap
+        rc = b.get("rest") or {"ahead": len(cs), "behind": 0}
+        br.append((b, cs, mb, rc["ahead"], rc["behind"]))
     cut = max([hs.index(m) for _, _, m, _, _ in br if m in hs] + [min(len(hs), 6) - 1]) + 1
     base_commits = bchain[:cap] if full else bchain[:max(cut, 1)]
     if not full and len(base_commits) > lim + 5:
@@ -529,6 +593,60 @@ def main(argv=None):
         print("LAYOUT PROBLEM:", p)
     return 2 if probs else 0
 
+def _ci_state(conclusion, status):
+    c = (conclusion or "").upper()
+    if (status or "COMPLETED").upper() != "COMPLETED" or not c:
+        return "pending"
+    return "success" if c in ("SUCCESS", "NEUTRAL", "SKIPPED") else "failure"
+
+def _ctx_state(st):
+    st = (st or "").upper()
+    return "success" if st == "SUCCESS" else "pending" if st in ("PENDING", "EXPECTED", "") else "failure"
+
+def ci_from_checks(checks):
+    """checks: [{name, state, url}] -> overall state: any failure > any pending > success."""
+    if not checks:
+        return None
+    sts = {c["state"] for c in checks}
+    return dict(state="failure" if "failure" in sts else "pending" if "pending" in sts else "success", checks=checks[:25])
+
+def ci_from_graphql(roll):
+    if not roll:
+        return None
+    checks = []
+    for n in roll["contexts"]["nodes"]:
+        if n["__typename"] == "CheckRun":
+            checks.append(dict(name=n["name"], state=_ci_state(n["conclusion"], n["status"]), url=n.get("detailsUrl")))
+        else:
+            checks.append(dict(name=n["context"], state=_ctx_state(n["state"]), url=n.get("targetUrl")))
+    ci = ci_from_checks(checks) or dict(checks=[])
+    ci["state"] = ci.get("state") or {"SUCCESS": "success", "FAILURE": "failure", "ERROR": "failure"}.get(roll["state"], "pending")
+    return ci
+
+def ci_from_gh_pr(roll):
+    checks = []
+    for n in roll or []:
+        if n.get("__typename") == "StatusContext":
+            checks.append(dict(name=n.get("context"), state=_ctx_state(n.get("state")), url=n.get("targetUrl")))
+        else:
+            checks.append(dict(name=n.get("name") or n.get("workflowName"), state=_ci_state(n.get("conclusion"), n.get("status")), url=n.get("detailsUrl")))
+    return ci_from_checks(checks)
+
+def tags_local(repo):
+    """{commit sha: [tag names]}; annotated tags are peeled to the commit they point at."""
+    res = {}
+    for l in lines(git(repo, "for-each-ref", "--format=%(refname:short)\t%(objectname)\t%(*objectname)", "refs/tags", check=False)):
+        n, o, p = (l.split("\t") + ["", ""])[:3]
+        res.setdefault(p or o, []).append(n)
+    return res
+
+def tags_github(raw):
+    res = {}
+    for t in raw["repo"]["tags"]["nodes"]:
+        tg = t["target"]
+        res.setdefault((tg.get("target") or tg)["oid"], []).append(t["name"])
+    return res
+
 def conflicts_local(repo, base_ref, ln):
     """exact: a throwaway in-memory merge (git merge-tree) of the branch into base. Nothing in the repo changes."""
     n = ln["name"]
@@ -547,7 +665,7 @@ def conflicts_local(repo, base_ref, ln):
         return dict(state="conflict", files=sorted(set(files)), changed=changed, source="git")
     return dict(state="unknown", files=[], changed=changed, source="git")  # git older than 2.38
 
-def conflicts_github(owner, name, base, lanes):
+def conflicts_github(owner, name, base, lanes, rest=None):
     """no clone, so: GitHub's own mergeable flag when the branch has a PR, else the files changed on BOTH sides since the fork point."""
     from concurrent.futures import ThreadPoolExecutor
     from urllib.parse import quote
@@ -561,7 +679,8 @@ def conflicts_github(owner, name, base, lanes):
             return None
         if not ln["ahead"]:
             return dict(state="merged", files=[], changed=[], source="files")
-        mine = files(f"{base}...{ln['name']}")
+        r0 = (rest or {}).get(ln["name"])
+        mine = r0["files"] if r0 else files(f"{base}...{ln['name']}")
         pr = ln["pr"]
         if pr and pr["state"] == "OPEN" and pr.get("mergeable") in ("MERGEABLE", "CONFLICTING"):
             st = "clean" if pr["mergeable"] == "MERGEABLE" else "conflict"
@@ -584,20 +703,25 @@ def graph(a, x):
     if x["kind"] == "github":  # API only, nothing cloned; GraphQL returns at most 100 commits per branch
         raw = fetch_github(x["owner"], x["repo"], 100, a.max_branches)
         base, lanes = lanes_github(raw, a.max_commits, True, 100, a.max_branches)
-        conf = conflicts_github(x["owner"], x["repo"], base, lanes)
+        conf = conflicts_github(x["owner"], x["repo"], base, lanes, {b["name"]: b.get("rest") for b in raw["repo"]["refs"]["nodes"]})
+        ci_by = {b["name"]: ci_from_graphql(b["target"].get("statusCheckRollup")) for b in raw["repo"]["refs"]["nodes"]}
+        ci_by[base] = ci_from_graphql(raw["repo"]["base"]["target"].get("statusCheckRollup"))
+        tags = tags_github(raw)
     else:
         base, base_ref, lanes = collect(x["path"], a.base, only, a.max_commits, True, a.cap, a.max_branches)
         conf = [None if ln["is_base"] else conflicts_local(x["path"], base_ref, ln) for ln in lanes]
+        ci_by = {ln["name"]: ci_from_gh_pr((ln["pr"] or {}).get("statusCheckRollup")) for ln in lanes}  # local: only what gh knows about a branch's PR
+        tags = tags_local(x["path"])
     out = []
     for ln, cf in zip(lanes, conf):
         info, pr = ln["info"], ln["pr"]
         out.append(dict(
             name=ln["name"], is_base=ln["is_base"], mb=ln.get("mb"), ahead=ln.get("ahead", 0), behind=ln.get("behind", 0),
-            more=ln["hidden"], upstream=info.get("upstream"), track=info.get("track", ""), conflict=cf,
+            more=ln["hidden"], upstream=info.get("upstream"), track=info.get("track", ""), conflict=cf, ci=ci_by.get(ln["name"]),
             pr=dict(number=pr["number"], state=pr["state"], title=pr["title"], url=pr.get("url"), draft=bool(pr.get("isDraft")), mergeable=pr.get("mergeable"),
                     review=pr.get("reviewDecision"), author=pr.get("author"), created=pr.get("createdAt"), base=pr.get("baseRefName")) if pr else None,
             commits=[dict(c, unpushed=c["hash"] in ln["unpushed"]) for c in ln["commits"]]))
-    return dict(base=base, skipped=lanes[0].get("skipped", 0), lanes=out, ts=time.strftime("%Y-%m-%d %H:%M:%S"))
+    return dict(base=base, skipped=lanes[0].get("skipped", 0), lanes=out, tags=tags, ts=time.strftime("%Y-%m-%d %H:%M:%S"))
 
 def list_dirs(q):
     """terminal-style completion for the folder box: sub-folders matching what has been typed so far."""

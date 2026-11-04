@@ -18,7 +18,7 @@
 
   .float { position:fixed; z-index:5; background:var(--panel); border-radius:14px; box-shadow:var(--shadow) }
   /* centered top bar */
-  #top { top:14px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:4px; padding:6px 8px; max-width:calc(100vw - 24px); flex-wrap:wrap; justify-content:center }
+  #top { top:14px; left:50%; transform:translateX(-50%); width:max-content; display:flex; align-items:center; gap:4px; padding:6px 8px; max-width:calc(100vw - 24px); flex-wrap:wrap; justify-content:center }
   #top .logo { font-weight:800; font-size:16px; padding:0 10px 0 8px; letter-spacing:-.01em; white-space:nowrap }
   #top select { border:0; background:#f3f4f6; font-weight:600; font-size:15px; padding:8px 10px; max-width:260px; cursor:pointer; border-radius:10px }
   .tb { padding:8px 13px; border-radius:10px; font-weight:600; font-size:14.5px; white-space:nowrap; position:relative }
@@ -26,7 +26,7 @@
   .tb.primary { background:var(--accent); color:#fff } .tb.primary:hover { background:#3350e0 }
   .tb .badge { background:var(--accent); color:#fff; border-radius:10px; font-size:11px; padding:0 6px; margin-left:6px; font-weight:700 }
   .sep { width:1px; height:22px; background:var(--line); margin:0 4px }
-  #status { position:fixed; top:74px; left:50%; transform:translateX(-50%); z-index:4; font-size:13.5px; color:var(--muted); background:rgba(255,255,255,.85); backdrop-filter:blur(6px); padding:4px 14px; border-radius:20px; box-shadow:0 0 0 1px var(--line); white-space:nowrap; max-width:calc(100vw - 24px); overflow:hidden; text-overflow:ellipsis }
+  #status { position:fixed; top:68px; left:50%; transform:translateX(-50%); z-index:4; font-size:13.5px; color:var(--muted); background:rgba(255,255,255,.85); backdrop-filter:blur(6px); padding:4px 14px; border-radius:20px; box-shadow:0 0 0 1px var(--line); white-space:nowrap; max-width:calc(100vw - 24px); overflow:hidden; text-overflow:ellipsis }
   body.side #top, body.side #status, body.side .pop { left:calc((100vw - 404px) / 2) }
   #tools { top:50%; left:14px; transform:translateY(-50%); display:flex; flex-direction:column; padding:6px; gap:2px }
   #tools button { width:44px; height:44px; border-radius:10px; font-size:19px; display:grid; place-items:center; color:#344054 }
@@ -41,7 +41,7 @@
   #edges { position:absolute; left:0; top:0; overflow:visible; pointer-events:none }
 
   /* branch title: sits right above its commits */
-  .head { position:absolute; width:256px; height:88px; border-radius:14px; padding:11px 14px; color:#fff; cursor:grab; box-shadow:0 3px 10px rgba(0,0,0,.18); user-select:none }
+  .head { position:absolute; width:256px; height:100px; border-radius:14px; padding:11px 14px; color:#fff; cursor:grab; box-shadow:0 3px 10px rgba(0,0,0,.18); user-select:none }
   .head .n { font-weight:800; font-size:18px; line-height:1.2; display:flex; gap:7px; align-items:center }
   .head .n span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
   .head .sub { margin-top:7px; display:flex; gap:5px; flex-wrap:wrap }
@@ -69,10 +69,22 @@
   .av { width:18px; height:18px; border-radius:50%; color:#fff; font-size:8.5px; font-weight:800; display:grid; place-items:center; flex:none }
   .tag { margin-left:auto; flex:none; font-size:10.5px; font-weight:800; border-radius:10px; padding:1px 8px; background:#fff; letter-spacing:.03em }
   .card.merge { border-width:3px }
-  .card.fresh::after { content:"NEW"; position:absolute; top:0; right:0; background:#16a34a; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-bottom-left-radius:9px; border-top-right-radius:9px }
+  .card.fresh::after { content:"NEW"; position:absolute; top:-10px; right:12px; background:#16a34a; color:#fff; font-size:10.5px; font-weight:800; padding:1px 9px; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.2) }
   .more { position:absolute; width:256px; height:40px; border-radius:20px; border:2px dashed; background:#fff; font-weight:700; font-size:14px; display:grid; place-items:center; cursor:pointer }
   .more:hover { background:#f4f4f6 } .more.note { cursor:default; color:var(--muted); border-color:#c9c9d1; font-weight:500; font-size:13px; text-align:center; line-height:1.2; padding:0 10px; height:auto; min-height:40px }
 
+  .tags { position:absolute; left:10px; top:-13px; display:flex; gap:4px; z-index:2 }
+  .tagchip { background:#fff7d6; color:#8a5a00; border:1.5px solid #f2c94c; border-radius:10px; font-size:11.5px; font-weight:800; padding:0 8px; line-height:18px; white-space:nowrap; box-shadow:0 1px 2px rgba(0,0,0,.12); max-width:150px; overflow:hidden; text-overflow:ellipsis }
+  .ci { display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; font-size:11px; font-weight:800; color:#fff; margin-right:6px; flex:none; vertical-align:middle }
+  .ci.success { background:#1a7f37 } .ci.failure { background:#cf222e } .ci.pending { background:#d4a006 }
+  .dim { opacity:.2; transition:opacity .15s } .head,.card,.pr { transition:opacity .15s }
+  .checks { list-style:none; margin:0; padding:0; border-radius:10px; box-shadow:0 0 0 1px var(--line) inset; overflow:hidden }
+  .checks li { padding:8px 12px; border-bottom:1px solid var(--line); display:flex; align-items:center; font-size:14px; gap:2px } .checks li:last-child { border:0 }
+  .checks a { color:inherit; text-decoration:none } .checks a:hover { text-decoration:underline }
+  .files li small { font-family:var(--font); font-weight:500; color:var(--muted) } .files li.warm { background:var(--warnbg); color:#78350f }
+  .hotrow { padding:10px 12px; border-radius:10px; cursor:pointer; margin-bottom:4px; box-shadow:0 0 0 1px var(--line) inset } .hotrow:hover { background:#fafafa } .hotrow.on { background:var(--warnbg); box-shadow:0 0 0 2px #f59e0b inset }
+  .hotrow code { font-size:13px; font-weight:600; word-break:break-all } .hotrow .who { margin-top:6px; display:flex; gap:5px; flex-wrap:wrap }
+  #hotList { max-height:50vh; overflow:auto; margin-top:10px }
   /* inspector */
   #side { top:14px; right:14px; bottom:64px; width:390px; overflow:auto; display:none; padding:0 }
   #side.open { display:block }
@@ -131,6 +143,7 @@
   <button class="tb" id="addBtn">+ Add repo</button>
   <span class="sep"></span>
   <button class="tb" id="filtBtn">⚙ Filters<span class="badge" id="filtN" style="display:none"></span></button>
+  <button class="tb" id="hotBtn">🔥 Hot files<span class="badge" id="hotN" style="display:none"></span></button>
   <button class="tb" id="expAll">Expand all</button>
   <button class="tb primary" id="reload" title="Re-read the repo and mark what's new">⟳ Reload</button>
 </div>
@@ -150,6 +163,12 @@
   <div class="frow"><label>Hide fully merged<small>Already inside the main line</small></label><button class="switch" id="fMerged" aria-label="Hide fully merged"></button></div>
   <div class="frow"><label>Only branches with conflicts<small>Would clash with the main line</small></label><button class="switch" id="fConf" aria-label="Only conflicting"></button></div>
   <p id="fSummary"></p>
+</div>
+
+<div id="hotpop" class="float pop">
+  <h3>🔥 Hot files</h3>
+  <p style="margin:0">Files changed on <b>more than one</b> branch. When those branches land, these are where they can collide. Click a file to highlight the branches touching it.</p>
+  <div id="hotList"></div>
 </div>
 
 <div id="tools" class="float">
@@ -188,7 +207,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const toast = t => { const n = $('toast'); n.textContent = t; n.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => n.style.display = 'none', 1600); };
 
 // ---------- constants ----------
-const CW = 256, CH = 112, PRH = 96, HEAD_H = 88, COLX = 330, ROWY = 144, GAP_HEAD = 26, START = 6;
+const CW = 256, CH = 112, PRH = 96, HEAD_H = 100, COLX = 330, ROWY = 144, GAP_HEAD = 26, START = 6;
 const BASE_COLOR = '#16a34a';
 const COLORS = ['#4262ff', '#f97316', '#a855f7', '#ec4899', '#0ea5e9', '#d4a006', '#ef4444', '#14b8a6', '#8b5cf6', '#65a30d'];
 const tint = (hex, a = .14) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
@@ -197,12 +216,15 @@ const avColor = n => AV[[...n].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.len
 const initials = n => (n.match(/\b\w/g) || ['?']).slice(0, 2).join('').toUpperCase();
 const PRS = { OPEN: ['#1a7f37', '#dcfce7', 'Open'], DRAFT: ['#57606a', '#eaeef2', 'Draft'], MERGED: ['#8250df', '#f1e8ff', 'Merged'], CLOSED: ['#cf222e', '#ffe4e6', 'Closed'] };
 const prState = pr => pr.draft && pr.state === 'OPEN' ? 'DRAFT' : pr.state;
+const CI = { success: ['✓', 'Passing', 'ok'], failure: ['✗', 'Failing', 'bad'], pending: ['●', 'Running', 'warn'] };
+const ciDot = ci => ci ? `<span class="ci ${ci.state}" title="CI: ${CI[ci.state][1].toLowerCase()}">${CI[ci.state][0]}</span>` : '';
 const DAY = 86400, nowS = () => Date.now() / 1000;
 const ago = ct => { const d = Math.max(0, (nowS() - ct) / DAY); if (d < 1) return 'today'; if (d < 2) return 'yesterday'; if (d < 31) return Math.floor(d) + ' days ago'; if (d < 365) return Math.round(d / 30) + ' months ago'; return (d / 365).toFixed(1) + ' years ago'; };
 const ageDays = ln => ln.commits.length ? (nowS() - ln.commits[0].ct) / DAY : 0;
 
 // ---------- state ----------
 let view = { x: 120, y: 100, k: 1 }, data = null, repos = [], cur = store.get('gc-repo', null), L = null, selKey = null;
+let HOT = [], hotFile = null;
 let expanded = new Set(), offs = {}, flt = { max: 25, stale: 0, merged: false, conf: false, ...store.get('gc-filters', {}) };
 const expKey = () => 'gc-exp-' + cur, offKey = () => 'gc-off-' + cur;
 
@@ -239,6 +261,7 @@ function layout() {
   for (const ln of lanes) {
     ln.cards = ln.shown.filter(c => owner[c.hash] === ln).map(c => add(c.hash, 'card', ln, ln.x, y0 + (maxRow - row[c.hash]) * ROWY, CW, CH, { c }));
     const top = ln.cards.length ? Math.min(...ln.cards.map(k => k.y)) : y0;
+    ln.tip = ln.cards.find(k => k.y === top) || null;
     let y = top;
     ln.prItem = null;
     if (ln.pr) { y -= PRH + 22; ln.prItem = add('pr:' + ln.name, 'pr', ln, ln.x, y, CW, PRH, { pr: ln.pr }); }
@@ -268,19 +291,20 @@ function draw() {
     const cf = ln.conflict, st = cf && cf.state;
     let chips = ln.is_base ? '<span class="chip">main line</span>' : ln.ahead === 0 ? '<span class="chip">fully merged ✓</span>' : `<span class="chip">↑${ln.ahead}</span>` + (ln.behind ? `<span class="chip">↓${ln.behind}</span>` : '');
     if (!ln.is_base && ln.ahead) chips += st === 'conflict' ? '<span class="chip bad">⚠ conflicts</span>' : st === 'possible' ? '<span class="chip warn">⚠ may conflict</span>' : st === 'clean' ? '<span class="chip ok">✓ clean</span>' : '';
+    if (ln.ci) chips += `<span class="chip ${CI[ln.ci.state][2]}">${CI[ln.ci.state][0]} CI</span>`;
     if (!ln.is_base && ageDays(ln) > 60) chips += `<span class="chip">⏱ ${Math.round(ageDays(ln) / 30)}mo</span>`;
     mk(ln.headItem, `head${ageDays(ln) > 180 && !ln.is_base ? ' stale' : ''}`, `<div class="n">⑂ <span title="${esc(ln.name)}">${esc(ln.name)}</span></div><div class="sub">${chips}</div>`).style.background = ln.color;
     if (ln.prItem) {
       const pr = ln.pr, sk = prState(pr), col = PRS[sk] || PRS.OPEN;
       const m = pr.state !== 'OPEN' ? '' : st === 'conflict' || pr.mergeable === 'CONFLICTING' ? '<span class="pill" style="background:var(--badbg);color:var(--bad)">⚠ conflicts</span>' : st === 'possible' ? '<span class="pill" style="background:var(--warnbg);color:var(--warn)">⚠ may conflict</span>' : '<span class="pill" style="background:var(--okbg);color:var(--ok)">✓ can merge</span>';
-      mk(ln.prItem, 'pr', `<div class="t"><span class="pill" style="background:${col[1]};color:${col[0]}">⇄ ${col[2]}</span><span style="color:var(--muted)">#${pr.number}</span><span style="margin-left:auto">${m}</span></div><div class="m">${esc(pr.title)}</div>`).style.borderColor = col[0];
+      mk(ln.prItem, 'pr', `<div class="t"><span class="pill" style="background:${col[1]};color:${col[0]}">⇄ ${col[2]}</span><span style="color:var(--muted)">#${pr.number}</span>${ciDot(ln.ci)}<span style="margin-left:auto">${m}</span></div><div class="m">${esc(pr.title)}</div>`).style.borderColor = col[0];
     }
   }
   for (const it of Object.values(L.items)) if (it.kind === 'card') {
     const c = it.c, ln = it.ln, merge = c.parents.length > 1, fork = ln.is_base && L.forkOf[c.hash], unp = c.unpushed && ln.upstream;
     const tag = merge ? `<span class="tag" style="color:${ln.color}">MERGE</span>` : fork ? `<span class="tag" style="color:#c2410c" title="${esc(fork.join(', '))} last shared history with this line here">SPLIT</span>` : '';
     const d = mk(it, `card${unp ? ' unpushed' : ''}${merge ? ' merge' : ''}${fresh.has(c.hash) ? ' fresh' : ''}`,
-      `<div class="r1"><span class="h" style="color:${ln.color}">${esc(c.short)}</span><span>${esc(c.date)}</span></div><div class="m">${esc(c.msg)}</div>
+      `${tagsHtml(c.hash)}<div class="r1"><span class="h" style="color:${ln.color}">${esc(c.short)}</span><span>${it === ln.tip ? ciDot(ln.ci) : ''}${esc(c.date)}</span></div><div class="m">${esc(c.msg)}</div>
        <div class="a"><span class="av" style="background:${avColor(c.author)}">${esc(initials(c.author))}</span><b>${esc(c.author)}</b>${tag}</div>`);
     const t = tint(ln.color, merge ? .28 : .14);
     d.style.background = `linear-gradient(${t},${t}),#fff`; d.style.borderColor = ln.color;
@@ -293,9 +317,10 @@ function draw() {
   }
   world.appendChild(frag);
   if (selKey && els[selKey]) els[selKey].classList.add('sel');
-  drawEdges();
+  drawEdges(); computeHot(); applyDim();
   $('empty').style.display = 'none';
 }
+const tagsHtml = h => { const t = (data.tags || {})[h]; if (!t) return ''; const more = t.length > 2 ? `<span class="tagchip">+${t.length - 2}</span>` : ''; return `<div class="tags">${t.slice(0, 2).map(n => `<span class="tagchip" title="Tag: ${esc(n)}">🏷 ${esc(n)}</span>`).join('')}${more}</div>`; };
 function place(it) { const d = els[it.key]; if (!d) return; const p = pos(it); d.style.left = p.x + 'px'; d.style.top = p.y + 'px'; }
 
 function rounded(p, r) {
@@ -344,7 +369,18 @@ function drawEdges() {
 const cmd = c => `<div class="cmd"><span>${esc(c)}</span><button data-copy="${esc(c)}">Copy</button></div>`;
 const kvRow = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
 const laneChip = ln => `<a class="pill link" data-lane="${esc(ln.name)}" style="background:${tint(ln.color, .16)};color:${ln.color};text-decoration:none">⑂ ${esc(ln.name)}</a>`;
-const fileList = (files, hot = []) => files.length ? `<ul class="files">${files.slice(0, 80).map(f => `<li class="${hot.includes(f) ? 'hot' : ''}">${esc(f)}</li>`).join('')}${files.length > 80 ? `<li>…and ${files.length - 80} more</li>` : ''}</ul>` : '';
+const fileList = (files, hot = [], warm = {}) => files.length ? `<ul class="files">${files.slice(0, 80).map(f => `<li class="${hot.includes(f) ? 'hot' : warm[f] ? 'warm' : ''}">${esc(f)}${warm[f] && !hot.includes(f) ? `<small> · also in ${esc(warm[f])}</small>` : ''}</li>`).join('')}${files.length > 80 ? `<li>…and ${files.length - 80} more</li>` : ''}</ul>` : '';
+function checksSection(ci) {
+  if (!ci || !ci.checks) return '';
+  const c = CI[ci.state], bad = ci.checks.filter(k => k.state === 'failure').length;
+  return `<h4>Checks (CI)</h4><div class="callout ${c[2]}" style="margin:0 0 10px"><b class="t">${c[0]} ${ci.state === 'failure' ? bad + ' failing' : c[1]}</b>${ci.state === 'failure' ? 'Automated tests or builds failed on the newest commit. Fix before merging.' : ci.state === 'pending' ? 'Checks are still running on the newest commit.' : 'All automated checks passed on the newest commit.'}</div>`
+    + (ci.checks.length ? `<ul class="checks">${ci.checks.map(k => `<li>${ciDot({ state: k.state })}${k.url ? `<a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(k.name)} ↗</a>` : esc(k.name)}</li>`).join('')}</ul>` : '');
+}
+function sharedFiles(ln) {  // files this branch changes that other (unmerged) branches also change
+  const out = {};
+  for (const h of HOT) if (h.lanes.includes(ln)) out[h.file] = h.lanes.filter(x => x !== ln).map(x => x.name).join(', ');
+  return out;
+}
 function conflictCallout(ln, list = true) {
   const cf = ln.conflict, base = data.base; if (!cf || ln.is_base) return '';
   const n = cf.files.length;
@@ -366,16 +402,18 @@ function inspect(key) {
       : `<div class="callout info"><b class="t">A saved snapshot</b>${c.parents.length ? `Built on top of ${parents}. Following these links backwards walks the project's history.` : 'This is the very first commit. Everything else was built on it.'}</div>`;
     if (fork) why += `<div class="callout warn"><b class="t">Split point</b>${fork.map(esc).join(', ')} and <b>${esc(ln.name)}</b> last shared history here. Anything added to <b>${esc(ln.name)}</b> after this is invisible to that branch until it merges or rebases.</div>`;
     if (c.unpushed && ln.upstream) why += `<div class="callout warn"><b class="t">Not pushed yet</b>This commit exists only on your computer. Teammates can't see it.</div>`;
+    const tg = (data.tags || {})[c.hash];
+    if (tg) why += `<div class="callout warn" style="background:#fff7d6;color:#6b4500"><b class="t">🏷 ${tg.map(esc).join(', ')}</b>A tag is a permanent name for one exact commit, usually a release. Unlike a branch, it never moves.</div>`;
     band = band_(ln.color, 'Commit', c.msg);
     body = `<dl class="kv" style="margin-top:16px">${kvRow('Branch', laneChip(ln))}${kvRow('Author', `<span class="av" style="background:${avColor(c.author)}">${esc(initials(c.author))}</span>${esc(c.author)}`)}${kvRow('When', `${esc(c.date)} <span style="color:var(--muted)">· ${ago(c.ct)}</span>`)}${kvRow('Built on', parents || '-')}${kvRow('ID', `<code>${esc(c.short)}</code>`)}</dl>${why}
-      <h4>Try it</h4>${cmd('git show ' + c.short)}<div class="cmdnote">See exactly what this commit changed.</div>${cmd('git checkout ' + c.short)}<div class="cmdnote">Look around the project as it was at this moment.</div>`;
+      ${it === ln.tip ? checksSection(ln.ci) : ''}<h4>Try it</h4>${cmd('git show ' + c.short)}<div class="cmdnote">See exactly what this commit changed.</div>${cmd('git checkout ' + c.short)}<div class="cmdnote">Look around the project as it was at this moment.</div>`;
   } else if (it.kind === 'pr') {
     const pr = it.pr, sk = prState(pr), col = PRS[sk] || PRS.OPEN, bl = L.lanes[0];
     band = band_(col[0], `Pull request #${pr.number}`, pr.title);
     const rv = { APPROVED: ['✓ Approved', 'ok'], CHANGES_REQUESTED: ['Changes requested', 'bad'], REVIEW_REQUIRED: ['Review needed', 'warn'] }[pr.review];
     body = `<dl class="kv" style="margin-top:16px">${kvRow('Status', `<span class="pill" style="background:${col[1]};color:${col[0]}">${col[2]}</span>`)}${kvRow('Author', esc(pr.author || '?'))}${kvRow('From', laneChip(ln))}${kvRow('Into', `<span class="pill" style="background:${tint(BASE_COLOR, .16)};color:${BASE_COLOR}">⑂ ${esc(pr.base || base)}</span>`)}${rv ? kvRow('Review', `<span class="pill" style="background:var(--${rv[1]}bg);color:var(--${rv[1] === 'ok' ? 'ok' : rv[1] === 'bad' ? 'bad' : 'warn'})">${rv[0]}</span>`) : ''}${pr.created ? kvRow('Opened', ago(Date.parse(pr.created) / 1000)) : ''}</dl>
       <div class="callout info"><b class="t">What's a pull request?</b>A request to merge this branch into <b>${esc(pr.base || base)}</b>, with a place to discuss and review the changes first.</div>
-      ${pr.state === 'OPEN' ? conflictCallout(ln) : ''}${pr.url ? `<h4>On GitHub</h4><a class="link" href="${esc(pr.url)}" target="_blank" rel="noopener">Open pull request ↗</a>` : ''}`;
+      ${pr.state === 'OPEN' ? conflictCallout(ln) : ''}${checksSection(ln.ci)}${pr.url ? `<h4>On GitHub</h4><a class="link" href="${esc(pr.url)}" target="_blank" rel="noopener">Open pull request ↗</a>` : ''}`;
   } else {
     const cf = ln.conflict, tot = ln.ahead + ln.behind;
     band = band_(ln.color, ln.is_base ? 'Main line' : 'Branch', ln.name);
@@ -388,10 +426,13 @@ function inspect(key) {
       why = `<div class="callout info">${p.filter(Boolean).join('<br><br>') || 'Identical to ' + esc(base)}</div>`;
     }
     const stale = !ln.is_base && ageDays(ln) > 30 ? `<div class="callout warn"><b class="t">⏱ Stale</b>Last commit ${ago(ln.commits[0].ct)}. If it's abandoned or merged, consider deleting it.</div>` : '';
+    const warm = ln.is_base ? {} : sharedFiles(ln), nw = Object.keys(warm).length, others = [...new Set(Object.values(warm).flatMap(v => v.split(', ')))];
+    const hotCallout = nw ? `<div class="callout warn"><b class="t">🔥 ${nw} shared file${nw > 1 ? 's' : ''}</b>Also being changed on <b>${others.map(esc).join(', ')}</b>. Whichever lands second may hit a conflict.</div>` : '';
+    const filesHtml = cf && cf.changed.length ? `<h4>Files changed on this branch (${cf.changed.length})</h4><div class="cmdnote" style="margin:0 0 8px">${cf.files.length ? '<b style="color:var(--bad)">Red</b> clashes with ' + esc(data.base) + '. ' : ''}${nw ? '<b style="color:var(--warn)">Amber</b> is also changed on another branch.' : ''}</div>${fileList(cf.changed, cf.files, warm)}` : '';
     const cmds = ln.is_base ? '' : `<h4>Try it</h4>${ln.ahead ? cmd(`git checkout ${base} && git merge ${ln.name}`) + '<div class="cmdnote">Merge this branch into ' + esc(base) + '.</div>' : ''}${ln.behind ? cmd(`git checkout ${ln.name} && git merge ${base}`) + '<div class="cmdnote">Bring this branch up to date. This is where you\'d resolve conflicts.</div>' : ''}${cmd(`git log ${base}..${ln.name} --oneline`)}<div class="cmdnote">List the commits only this branch has.</div>`;
     body = `${ln.is_base ? '' : `<div class="stats"><div class="stat"><b style="color:${ln.color}">${ln.ahead}</b><span>commits ahead</span></div><div class="stat"><b>${ln.behind}</b><span>commits behind</span></div></div>${tot ? `<div class="bar"><i style="width:${ln.ahead / tot * 100}%;background:${ln.color}"></i><i style="flex:1;background:${BASE_COLOR};opacity:.45"></i></div>` : ''}`}
       <dl class="kv" style="margin-top:16px">${kvRow('Remote', ln.upstream ? esc(ln.upstream) + (ln.track ? ` <i style="color:var(--muted)">(${esc(ln.track)})</i>` : '') : '<span style="color:var(--muted)">none (local only)</span>')}${ln.commits.length ? kvRow('Updated', ago(ln.commits[0].ct)) : ''}${ln.pr ? kvRow('PR', `<a class="link" data-key="pr:${esc(ln.name)}">#${ln.pr.number}</a> <span class="pill" style="background:${(PRS[prState(ln.pr)] || PRS.OPEN)[1]};color:${(PRS[prState(ln.pr)] || PRS.OPEN)[0]}">${(PRS[prState(ln.pr)] || PRS.OPEN)[2]}</span>`) : ''}</dl>
-      ${why}${stale}${conflictCallout(ln, false)}${cf && cf.changed.length && cf.state !== 'conflict' && cf.state !== 'possible' ? `<h4>Files changed on this branch (${cf.changed.length})</h4>${fileList(cf.changed)}` : cf && cf.changed.length ? `<h4>Files changed on this branch (${cf.changed.length})</h4><div class="cmdnote" style="margin:0 0 8px">${cf.files.length ? 'Red = also changed on ' + esc(data.base) + ', so they clash.' : ''}</div>${fileList(cf.changed, cf.files)}` : ''}${cmds}`;
+      ${why}${stale}${conflictCallout(ln, false)}${hotCallout}${checksSection(ln.ci)}${filesHtml}${cmds}`;
   }
   s.innerHTML = band + `<div class="body">${body}</div>`; s.classList.add('open'); document.body.classList.add('side'); s.scrollTop = 0;
 }
@@ -409,6 +450,31 @@ function focusKey(key, select) {
   const r = rectOf(it), W = vp.clientWidth - (select ? 420 : 0);
   view.x = W / 2 - (r.x + r.w / 2) * view.k; view.y = vp.clientHeight / 2 - (r.y + r.h / 2) * view.k; applyView();
 }
+
+// ---------- hot files ----------
+function computeHot() {
+  const m = {};
+  for (const ln of L.lanes) if (!ln.is_base && ln.conflict && ln.conflict.state !== 'merged') for (const f of ln.conflict.changed || []) (m[f] ||= []).push(ln);
+  HOT = Object.entries(m).filter(([, l]) => l.length > 1).map(([file, lanes]) => ({ file, lanes })).sort((a, b) => b.lanes.length - a.lanes.length || a.file.localeCompare(b.file));
+  if (hotFile && !HOT.some(h => h.file === hotFile)) hotFile = null;
+  $('hotN').style.display = HOT.length ? '' : 'none'; $('hotN').textContent = HOT.length;
+  if ($('hotpop').classList.contains('open')) renderHot();
+}
+function renderHot() {
+  $('hotList').innerHTML = HOT.length ? HOT.slice(0, 60).map(h => `<div class="hotrow${h.file === hotFile ? ' on' : ''}" data-file="${esc(h.file)}"><code>${esc(h.file)}</code><div class="who">${h.lanes.map(l => `<a class="pill link" data-lane="${esc(l.name)}" style="background:${tint(l.color, .16)};color:${l.color};text-decoration:none">⑂ ${esc(l.name)}</a>`).join('')}</div></div>`).join('')
+    : '<p>No file is being changed by more than one branch right now. 🎉</p>';
+}
+function applyDim() {
+  const keep = hotFile ? new Set((HOT.find(h => h.file === hotFile) || { lanes: [] }).lanes.map(l => l.name)) : null;
+  for (const it of Object.values(L.items)) { const d = els[it.key]; if (d) d.classList.toggle('dim', !!keep && !it.ln.is_base && !keep.has(it.ln.name)); }
+}
+$('hotBtn').onclick = () => { closePops($('hotpop')); $('hotpop').classList.toggle('open'); renderHot(); };
+$('hotList').onclick = e => {
+  const l = e.target.closest('[data-lane]');
+  if (l) { const ln = L.lanes.find(x => x.name === l.dataset.lane); if (ln) { e.stopPropagation(); focusKey(ln.headItem.key, true); } return; }
+  const r = e.target.closest('[data-file]'); if (!r) return;
+  hotFile = hotFile === r.dataset.file ? null : r.dataset.file; renderHot(); applyDim();
+};
 
 // ---------- expand / filters ----------
 const toggleLane = name => { expanded.has(name) ? expanded.delete(name) : expanded.add(name); store.set(expKey(), [...expanded]); draw(); };
@@ -470,7 +536,7 @@ vp.addEventListener('wheel', e => {
 }, { passive: false });
 window.addEventListener('keydown', e => {
   if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
-  if (e.key === 'f') fit(); else if (e.key === 'n') goNewest(); else if (e.key === 't') $('tTidy').click(); else if (e.key === '?') $('tHelp').click(); else if (e.key === 'Escape') { deselect(); closePops(); $('help').classList.remove('open'); }
+  if (e.key === 'f') fit(); else if (e.key === 'n') goNewest(); else if (e.key === 't') $('tTidy').click(); else if (e.key === '?') $('tHelp').click(); else if (e.key === 'Escape') { deselect(); closePops(); hotFile = null; applyDim(); $('help').classList.remove('open'); }
 });
 
 // ---------- pointer: pan canvas, drag cards, drag a whole branch by its title ----------
@@ -479,7 +545,7 @@ vp.addEventListener('pointerdown', e => {
   const t = e.target.closest('.card,.pr,.head');
   if (e.button !== 0) return;
   closePops(); $('help').classList.remove('open');
-  if (!t) { if (e.target.closest('.more')) return; pan = { x: e.clientX - view.x, y: e.clientY - view.y, sx: e.clientX, sy: e.clientY }; return; }
+  if (!t) { if (e.target.closest('.more')) return; if (hotFile) { hotFile = null; applyDim(); } pan = { x: e.clientX - view.x, y: e.clientY - view.y, sx: e.clientX, sy: e.clientY }; return; }
   const key = t.dataset.key, it = L.items[key], offKeyName = it.kind === 'head' ? 'L:' + it.ln.name : key;
   drag = { key, it, el: t, name: offKeyName, sx: e.clientX, sy: e.clientY, o: [...off(offKeyName)], moved: false };
   e.preventDefault();
@@ -507,7 +573,7 @@ const busy = (on, msg) => { $('reload').disabled = on; if (msg) $('status').text
 const updateStatus = () => {
   const d = data, n = d.lanes.reduce((a, l) => a + l.commits.length, 0), f = (d.fresh || []).length, shown = L.lanes.length - 1, tot = d.lanes.length - 1;
   const conf = d.lanes.filter(l => l.conflict && l.conflict.state === 'conflict').length;
-  $('status').textContent = `${shown === tot ? tot : shown + ' of ' + tot} branch${tot === 1 ? '' : 'es'} · ${n} commits` + (conf ? ` · ⚠ ${conf} conflicting` : '') + (d.skipped ? ` · ${d.skipped} older not loaded` : '') + (f ? ` · ${f} new` : '');
+  $('status').textContent = `${shown === tot ? tot : shown + ' of ' + tot} branch${tot === 1 ? '' : 'es'} · ${n} commits` + (conf ? ` · ⚠ ${conf} conflicting` : '') + (d.lanes.filter(l => l.ci && l.ci.state === 'failure').length ? ` · ✗ ${d.lanes.filter(l => l.ci && l.ci.state === 'failure').length} failing CI` : '') + (d.skipped ? ` · ${d.skipped} older not loaded` : '') + (f ? ` · ${f} new` : '');
 };
 const openRepo = async reload => {
   busy(true, reload ? 'reading git & checking conflicts…' : 'loading…');
