@@ -754,12 +754,16 @@ def serve(a, repo):
         except (OSError, ValueError):
             return default
     def repos():
-        r = [x for x in jload(reg, []) if x.get("kind") == "github" or (x.get("kind") == "local" and os.path.isdir(x["path"]))]  # drop vanished folders
-        if not any(x.get("path") == repo for x in r):
-            r.insert(0, dict(id=rid(repo), kind="local", name=os.path.basename(repo), path=repo))
-        return r
+        lst = jload(reg, None)
+        if lst is None:  # first run only: start with the folder the server was started in; after that the list is entirely yours
+            lst = [dict(id=rid(repo), kind="local", name=os.path.basename(repo), path=repo)]
+            json.dump(lst, open(reg, "w"))
+        return [x for x in lst if x.get("kind") == "github" or (x.get("kind") == "local" and os.path.isdir(x["path"]))]  # drop vanished folders
     def find(i):
-        return next((x for x in repos() if x["id"] == i), None) or repos()[0]
+        x = next((x for x in repos() if x["id"] == i), None)
+        if not x:
+            raise ValueError("Add a repository first.")
+        return x
     def seen_path(x):
         return os.path.join(out, f"seen-{x['id']}.json")
     def hashes(g):
@@ -794,8 +798,6 @@ def serve(a, repo):
         json.dump(lst, open(reg, "w"))
         return x
     def remove(i):
-        if i == rid(repo):
-            raise ValueError("that is the folder the server was started in")
         json.dump([x for x in repos() if x["id"] != i], open(reg, "w"))
     port = a.port
     class H(BaseHTTPRequestHandler):
@@ -819,8 +821,8 @@ def serve(a, repo):
                     return self.reply(dict(repos=repos()))
                 if u.path == "/api/ls":
                     return self.reply(dict(dirs=list_dirs(q.get("q", [""])[0])))
-                x = find(q.get("repo", [""])[0])
                 if u.path == "/api/graph":
+                    x = find(q.get("repo", [""])[0])
                     a2 = copy.copy(a); a2.max_branches = max(1, min(100, int(q.get("max", [a.max_branches])[0])))
                     return self.reply(dict(repo=x["name"], id=x["id"], **load(x, post, a2)))
                 assets = {"/favicon.svg": "image/svg+xml", "/favicon.png": "image/png", "/apple-touch-icon.png": "image/png"}
