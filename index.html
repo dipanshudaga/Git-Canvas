@@ -937,7 +937,9 @@ $('tokClear').onclick = () => { store.set(TOKEN_KEY, ''); renderToken(); toast('
 
 // ----- start -----
 (async () => {
-  try { const r = await fetch('api/repos', { headers: { 'X-Gitdraw': '1' } }); STATIC = !(r.ok && (r.headers.get('content-type') || '').includes('json')); } catch { STATIC = true; }
+  if (['localhost', '127.0.0.1'].includes(location.hostname)) {  // only a local server can exist here; on a public site skip the probe
+    try { const r = await fetch('api/repos', { headers: { 'X-Gitdraw': '1' } }); STATIC = !(r.ok && (r.headers.get('content-type') || '').includes('json')); } catch { STATIC = true; }
+  } else STATIC = true;
   $('tryBox').style.display = STATIC ? '' : 'none'; $('src').placeholder = STATIC ? 'owner/repo or github.com URL' : 'owner/repo, URL, or local folder'; setPopMsg(); renderToken();
   try {
     repos = (await api('api/repos')).repos; if (!repos.some(r => r.id === cur)) cur = repos[0] ? repos[0].id : null;

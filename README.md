@@ -104,6 +104,9 @@ Git Canvas has no account, no database, and no analytics. The page loads no scri
 | `gitdraw.py` | The local server. It reads Git folders and runs `gh` |
 | `design/DESIGN-SYSTEM.md` | The colors, type sizes, and grid rules |
 | `assets/` | The preview image |
+| `favicon.svg`, `favicon.png`, `apple-touch-icon.png` | The page icons |
+| `design/logo/` | The source file of the logo |
+| `.nojekyll` | Tells GitHub Pages to publish the files as they are |
 
 ## Licence
 
