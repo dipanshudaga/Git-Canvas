@@ -8,14 +8,11 @@ See any GitHub repo as a map on an infinite canvas: branches as columns, commits
 2. **Settings → Pages → Build and deployment → Deploy from a branch → `main` / `(root)`**.
 3. Open `https://<you>.github.io/<repo>/`, open the repository menu (top left) and add `owner/repo`.
 
-Everything runs in the browser and talks straight to `api.github.com`; nothing is uploaded anywhere else.
+Paste a repository link on the front page (or paste one anywhere on the page) and it opens. **No sign-in and no token for public repos.** The address bar becomes a shareable link, e.g. `https://<you>.github.io/<repo>/?repo=tauri-apps/tauri`.
 
-| | Public repos | Private repos |
-|---|---|---|
-| No token | works, 60 API requests/hour (about 3 loads of a 10-branch repo) | not possible |
-| Read-only token | works, 5,000/hour, plus CI status and exact conflict checks | works for repos the token can see |
+Everything runs in the browser and talks straight to `api.github.com`; nothing is uploaded anywhere else. Results are remembered for 10 minutes, so reopening a repo costs no GitHub requests.
 
-Create a **fine-grained token** at <https://github.com/settings/personal-access-tokens/new>, select the repositories, and give it read-only access to *Contents, Pull requests, Metadata, Commit statuses, Checks*. (Classic tokens need the `repo` scope. Organisations using SSO must authorise the token.) The token is stored in your browser's local storage and only ever sent to `api.github.com`.
+GitHub lets each visitor make 60 anonymous requests per hour, and one repo costs about 18 (it loads the 12 most recently pushed branches without a token), so a few repos per hour work out of the box. **Private repos and heavier use are optional extras:** under *Advanced* in the repository menu you can paste a read-only token ([create one](https://github.com/settings/personal-access-tokens/new) with read access to Contents, Pull requests, Metadata, Commit statuses and Checks). That opens private repos, raises the limit to 5,000/hour and adds CI status. It is stored only in your browser and sent only to `api.github.com`.
 
 Limits: the newest 10 to 100 branches (you choose), up to 100 commits per branch, first-parent history only.
 

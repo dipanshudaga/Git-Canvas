@@ -168,6 +168,12 @@
   .sw { display:inline-block; width:24px; height:0; border-top:3px solid; vertical-align:middle; margin-right:var(--s1) } .sw.d { border-top-style:dashed }
   #empty { position:fixed; inset:0; display:none; place-items:center; color:var(--muted); pointer-events:none; text-align:center; font:var(--t-title); padding:0 20%; z-index:1 }
   #empty small { font:var(--t-body) }
+  body.empty #dock, body.empty #zoom { display:none }
+  #hero { position:fixed; inset:0; display:none; place-items:center; z-index:6; padding:var(--s5) }
+  #hero.open { display:grid }
+  .hero-card { width:min(560px, 100%); background:#fff; border-radius:var(--r3); box-shadow:var(--e2); padding:var(--s6) }
+  .hero-card h1 { font:var(--t-heading); margin:var(--s4) 0 var(--s1) } .hero-card > p { color:var(--muted); margin:0 0 var(--s4) }
+  .hero-card .note { margin-top:var(--s3) } .hero-card .note.err { color:var(--bad) } .hero-try { margin-top:var(--s4); color:var(--muted); font:var(--t-caption) }
   #toast { position:fixed; left:50%; bottom:calc(var(--edge) + var(--bar) + var(--s2)); transform:translateX(-50%); background:#14141c; color:#fff; height:var(--c); padding:0 var(--s4); border-radius:var(--pill); font:var(--t-label); z-index:20; display:none; align-items:center }
 </style>
 </head>
@@ -175,6 +181,14 @@
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-branch" viewBox="0 0 24 24"><line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></symbol><symbol id="i-pr" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" x2="6" y1="9" y2="21"/></symbol><symbol id="i-filter" viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol><symbol id="i-unfold" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></symbol><symbol id="i-fold" viewBox="0 0 24 24"><path d="m7 20 5-5 5 5"/><path d="m7 4 5 5 5-5"/></symbol><symbol id="i-fit" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol><symbol id="i-tidy" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol><symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></symbol><symbol id="i-github" viewBox="0 0 24 24"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol><symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol><symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></symbol><symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/></symbol></defs></svg>
 <div id="viewport"><div id="world"><svg id="edges"></svg></div></div>
 <div id="empty"><div id="emptyMsg"></div></div>
+<div id="hero"><div class="hero-card">
+  <svg viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#1e3a8a"/><path d="M22 16V48" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M22 48C22 38 42 42 42 30V20" stroke="#93c5fd" stroke-width="4.5" stroke-linecap="round" fill="none"/><circle cx="22" cy="16" r="6.5" fill="#22c55e" stroke="#1e3a8a" stroke-width="2.5"/><circle cx="22" cy="32" r="6" fill="#fff" stroke="#1e3a8a" stroke-width="2.5"/><circle cx="22" cy="48" r="6" fill="#fff" stroke="#1e3a8a" stroke-width="2.5"/><circle cx="42" cy="20" r="6" fill="#93c5fd" stroke="#1e3a8a" stroke-width="2.5"/></svg>
+  <h1>See any GitHub repo as a map</h1>
+  <p>Paste a repository link. Public repos open instantly, with no sign-in.</p>
+  <div class="in"><input type="text" id="heroSrc" placeholder="github.com/owner/repo" spellcheck="false" autocomplete="off"><button class="tb primary" id="heroGo">Open</button></div>
+  <p class="note" id="heroMsg"></p>
+  <div class="hero-try">Try <span class="try" data-try="tauri-apps/tauri">tauri-apps/tauri</span><span class="try" data-try="facebook/react">facebook/react</span><span class="try" data-try="vercel/next.js">vercel/next.js</span></div>
+</div></div>
 
 <div id="tl" class="float">
   <span class="logo"><svg viewBox="0 0 64 64" width="24" height="24" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#1e3a8a"/><path d="M22 16V48" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M22 48C22 38 42 42 42 30V20" stroke="#93c5fd" stroke-width="4.5" stroke-linecap="round" fill="none"/><circle cx="22" cy="16" r="6.5" fill="#22c55e" stroke="#1e3a8a" stroke-width="2.5"/><circle cx="22" cy="32" r="6" fill="#fff" stroke="#1e3a8a" stroke-width="2.5"/><circle cx="22" cy="48" r="6" fill="#fff" stroke="#1e3a8a" stroke-width="2.5"/><circle cx="42" cy="20" r="6" fill="#93c5fd" stroke="#1e3a8a" stroke-width="2.5"/></svg>Git Canvas</span>
@@ -196,12 +210,12 @@
   <h4 class="ph">Repositories</h4>
   <div id="repoList"></div>
   <p id="popmsg" class="note"></p>
-  <div id="tokenBox" style="display:none">
-    <h4 class="ph">GitHub access (optional)</h4>
+  <details id="tokenBox" style="display:none">
+    <summary class="ph" style="cursor:pointer">Advanced: private repos and higher limits</summary>
     <div class="in"><input type="password" id="tok" autocomplete="off" spellcheck="false"><button class="tb primary" id="tokSave">Save</button></div>
-    <p class="note">Public repos work without one (60 requests/hour). A <b>read-only token</b> gives 5,000/hour, CI status, exact conflict checks and <b>private repos</b>. It stays in this browser and only goes to api.github.com. <a class="link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create one <svg class="i xs" aria-hidden="true"><use href="#i-external"/></svg></a> <button class="try" id="tokClear" style="display:none">Remove saved token</button></p>
+    <p class="note">Not needed for public repos. A <b>read-only token</b> lets you open <b>private repos</b>, raises GitHub's free limit from 60 to 5,000 requests/hour, and adds CI status. It stays in this browser and only goes to api.github.com. <a class="link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create one <svg class="i xs" aria-hidden="true"><use href="#i-external"/></svg></a> <button class="try" id="tokClear" style="display:none">Remove saved token</button></p>
     <p class="note" id="rateInfo"></p>
-  </div>
+  </details>
 </div>
 
 <div id="filt" class="float pop caret">
@@ -576,7 +590,7 @@ const syncFilters = () => {
   $('fMerged').classList.toggle('on', flt.merged); $('fConf').classList.toggle('on', flt.conf);
   const n = (flt.stale ? 1 : 0) + (flt.merged ? 1 : 0) + (flt.conf ? 1 : 0) + (flt.max !== 25 ? 1 : 0);
   $('filtN').style.display = n ? '' : 'none'; $('filtN').textContent = n;
-  if (data) { const total = data.lanes.length - 1, shown = L ? L.lanes.length - 1 : total; $('fSummary').textContent = `Showing ${shown} of ${total} loaded branches` + (data.skipped ? ` (${data.skipped} older ones not loaded, so raise "Load up to")` : ''); }
+  if (data) { const total = data.lanes.length - 1, shown = L ? L.lanes.length - 1 : total; $('fSummary').textContent = `Showing ${shown} of ${total} loaded branches` + (data.skipped ? ` (${data.skipped} older ones not loaded, so raise "Load up to")` : '') + (STATIC && !getToken() && flt.max > 12 ? ' Without a token, up to 12 branches are loaded to stay inside the free GitHub limit.' : ''); }
 };
 const applyFilters = () => { store.set('gc-filters', flt); if (data) { draw(); syncFilters(); updateStatus(); } };
 seg('fMax', [[10, '10'], [25, '25'], [50, '50'], [100, '100']], 'max', () => { syncFilters(); openRepo(false); });
@@ -672,18 +686,21 @@ const busy = (on, msg) => { $('reload').disabled = on; if (msg) $('status').text
 const updateStatus = () => {
   const d = data, n = d.lanes.reduce((a, l) => a + l.commits.length, 0), f = (d.fresh || []).length, shown = L.lanes.length - 1, tot = d.lanes.length - 1;
   const conf = d.lanes.filter(l => l.conflict && l.conflict.state === 'conflict').length, bad = d.lanes.filter(l => l.ci && l.ci.state === 'failure').length;
-  $('status').textContent = `${shown === tot ? tot : shown + ' of ' + tot} branch${tot === 1 ? '' : 'es'} · ${n} commits` + (conf ? ` · ${conf} conflicting` : '') + (bad ? ` · ${bad} failing CI` : '') + (d.skipped ? ` · ${d.skipped} older not loaded` : '') + (f ? ` · ${f} new` : '');
+  $('status').textContent = `${shown === tot ? tot : shown + ' of ' + tot} branch${tot === 1 ? '' : 'es'} · ${n} commits` + (conf ? ` · ${conf} conflicting` : '') + (bad ? ` · ${bad} failing CI` : '') + (d.skipped ? ` · ${d.skipped} older not loaded` : '') + (STATIC && rate.remaining != null && rate.remaining < 15 ? ` · ${rate.remaining} free GitHub requests left` : '') + (f ? ` · ${f} new` : '');
 };
+const effMax = () => STATIC && !getToken() ? Math.min(flt.max, 12) : flt.max;  // without a token, stay well inside GitHub's free 60 requests/hour
+const showHero = () => { clearBoard(); data = null; L = null; $('empty').style.display = 'none'; $('hero').classList.add('open'); document.body.classList.add('empty'); $('status').textContent = 'Paste a repository link to begin'; setTimeout(() => $('heroSrc').focus(), 50); };
 const showEmpty = msg => { clearBoard(); data = null; L = null; $('emptyMsg').innerHTML = msg; $('empty').style.display = 'grid'; };
 const openRepo = async reload => {
-  if (!cur) { $('status').textContent = 'Add a repository to begin'; return showEmpty('Add a repository to see its branches.<br><small>Use the repository menu at the top left.</small>'); }
+  if (!cur) return showHero();
   busy(true, reload ? (STATIC ? 'asking GitHub…' : 'reading git & checking conflicts…') : 'loading…');
   try {
-    const d = await api(`api/graph?repo=${encodeURIComponent(cur)}&max=${flt.max}`, { method: reload ? 'POST' : 'GET' });
+    const d = await api(`api/graph?repo=${encodeURIComponent(cur)}&max=${effMax()}`, { method: reload ? 'POST' : 'GET' });
     data = d; data.github = (repos.find(r => r.id === cur) || {}).kind === 'github';
-    expanded = new Set(store.get(expKey(), [])); offs = store.get(offKey(), {}); laneOrder = store.get(ordKey(), []); for (const k of Object.keys(offs)) if (k.startsWith('L:')) delete offs[k];  // columns are reordered now, not free-floated deselect(); closePops();
+    expanded = new Set(store.get(expKey(), [])); offs = store.get(offKey(), {}); laneOrder = store.get(ordKey(), []); for (const k of Object.keys(offs)) if (k.startsWith('L:')) delete offs[k]; deselect(); closePops();  // (columns are reordered now, so old free-float offsets are dropped)
     clearBoard(); draw(false); syncFilters(); updateStatus(); goNewest();
-    $('empty').style.display = 'none'; setExp(false);
+    $('empty').style.display = 'none'; $('hero').classList.remove('open'); document.body.classList.remove('empty'); setExp(false);
+    if (STATIC) { const nm = (repos.find(r => r.id === cur) || {}).name; if (nm) try { history.replaceState(null, '', '?repo=' + nm); } catch {} }  // the address bar is now a shareable link
   } catch (e) { $('status').textContent = 'error: ' + e.message; showEmpty(esc(e.message)); }
   busy(false);
 };
@@ -706,16 +723,26 @@ $('repoList').onclick = async e => {
   }
   const li = e.target.closest('[data-id]'); if (li && li.dataset.id !== cur) { cur = li.dataset.id; store.set('gc-repo', cur); fillRepos(); closePops(); openRepo(false); }
 };
-const addRepo = async () => {
-  const src = $('src').value.trim(), m = $('popmsg'); if (!src) return;
-  $('addGo').disabled = true; m.className = 'note'; m.textContent = 'Adding…';
+async function addSource(src, msg, btn) {
+  src = (src || '').trim(); if (!src) return;
+  if (btn) btn.disabled = true; if (msg) { msg.className = 'note'; msg.textContent = 'Opening…'; }
   try {
     const r = await api('api/repos', { method: 'POST', body: JSON.stringify({ source: src }) });
-    repos = r.repos; cur = r.added; store.set('gc-repo', cur); fillRepos(); renderRepoList(); closePops(); $('src').value = ''; setPopMsg();
-    await openRepo(true);
-  } catch (e) { m.className = 'note err'; m.textContent = e.message; }
-  $('addGo').disabled = false;
-};
+    repos = r.repos; cur = r.added; store.set('gc-repo', cur); fillRepos(); renderRepoList(); closePops(); $('src').value = ''; $('heroSrc').value = ''; setPopMsg();
+    await openRepo(true); if (msg) msg.textContent = '';
+  } catch (e) { if (msg) { msg.className = 'note err'; msg.textContent = e.message; } else toast(e.message); }
+  if (btn) btn.disabled = false;
+}
+const addRepo = () => addSource($('src').value, $('popmsg'), $('addGo'));
+const heroGo = () => addSource($('heroSrc').value, $('heroMsg'), $('heroGo'));
+$('heroGo').onclick = heroGo; $('heroSrc').onkeydown = e => { if (e.key === 'Enter') heroGo(); };
+$('hero').addEventListener('click', e => { const t = e.target.closest('[data-try]'); if (t) { $('heroSrc').value = t.dataset.try; heroGo(); } });
+// paste a link anywhere on the page and it opens
+window.addEventListener('paste', e => {
+  if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  const t = ((e.clipboardData && e.clipboardData.getData('text')) || '').trim();
+  if (/^(https?:\/\/)?(www\.)?github\.com\/[\w.-]+\/[\w.-]+/i.test(t) || /^[\w.-]+\/[\w.-]+$/.test(t)) { e.preventDefault(); addSource(t, null, null); }
+});
 $('addGo').onclick = addRepo; $('reload').onclick = () => openRepo(true);
 $('tryBox').onclick = e => { const t = e.target.closest('[data-try]'); if (t) { $('src').value = t.dataset.try; addRepo(); } };
 let sugs = [], sel = -1, sugTimer = null;
@@ -752,14 +779,14 @@ async function ghReq(path, { gql } = {}) {
   } catch { throw new Error('Could not reach api.github.com. Check your connection.'); }
   const rem = r.headers.get('x-ratelimit-remaining'); if (rem != null) { rate.remaining = +rem; rate.limit = +r.headers.get('x-ratelimit-limit'); updateRate(); }
   if (r.status === 401) throw new Error('GitHub rejected the token (401). Remove it, or paste a new one.');
-  if (r.status === 403 || r.status === 429) throw new Error(rem === '0' ? `GitHub rate limit reached. Add a token for 5,000 requests/hour, or retry in ${resetIn(r)}.` : 'GitHub refused the request (403). ' + (tok ? 'Does the token have access to this repo (and is it authorised for SSO)?' : 'Private repos need a token.'));
-  if (r.status === 404) throw new Error(tok ? 'Repository not found, or your token cannot see it.' : 'Repository not found. If it is private, add a token.');
+  if (r.status === 403 || r.status === 429) throw new Error(rem === '0' ? `GitHub's free limit (60 requests per hour from your network) is used up. Try again in ${resetIn(r)}.${tok ? '' : ' Or add a token under Advanced in the repository menu.'}` : 'GitHub refused the request (403). ' + (tok ? 'Does the token have access to this repo (and is it authorised for SSO)?' : 'Most likely GitHub\'s free limit (60 requests per hour from your network) is used up, so try again in a while. It can also mean the repo is private.'));
+  if (r.status === 404) throw new Error(tok ? 'Repository not found, or your token cannot see it.' : "Couldn't find that repository. Git Canvas opens public repositories without signing in. Private repo? Add a token under Advanced in the repository menu.");
   if (!r.ok) throw new Error('GitHub error ' + r.status);
   return r.json();
 }
 async function ghGql(query, variables) { const j = await ghReq(null, { gql: { query, variables } }); if (j.errors && !j.data) throw new Error('GitHub: ' + j.errors[0].message); return j.data.repository; }
 async function pool(items, n, fn) { const out = new Array(items.length); let i = 0; await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) { const k = i++; out[k] = await fn(items[k], k); } })); return out; }
-const noRate = e => { if (/rate limit|401|token/i.test(e.message)) throw e; };
+const noRate = e => { if (/rate limit|\(401\)|free limit/i.test(e.message)) throw e; };
 const CI_Q = 'statusCheckRollup{state contexts(first:25){nodes{__typename ... on CheckRun{name conclusion status detailsUrl} ... on StatusContext{context state targetUrl}}}}';
 const GQL_LIST = `query($o:String!,$n:String!,$b:Int!,$base:String!){repository(owner:$o,name:$n){refs(refPrefix:"refs/heads/",first:$b,orderBy:{field:TAG_COMMIT_DATE,direction:DESC}){totalCount nodes{name target{oid ... on Commit{${CI_Q}}}}} base:ref(qualifiedName:$base){target{oid ... on Commit{${CI_Q}}}}}}`;
 const ciSt = (concl, status) => { const c = (concl || '').toUpperCase(); if ((status || 'COMPLETED').toUpperCase() !== 'COMPLETED' || !c) return 'pending'; return ['SUCCESS', 'NEUTRAL', 'SKIPPED'].includes(c) ? 'success' : 'failure'; };
@@ -780,8 +807,10 @@ const attachNodes = (mb, chain, nodes) => {  // oldest main-line commit that con
 };
 const encRef = s => s.split('/').map(encodeURIComponent).join('/');
 
+const infoMemo = {};
+async function repoInfo(R) { const m = infoMemo[R]; if (m && Date.now() - m.t < 60000) return m.v; const v = await ghReq(R); infoMemo[R] = { t: Date.now(), v }; return v; }
 async function buildGraph(x, max) {
-  const o = x.owner, n = x.repo, R = `/repos/${o}/${n}`, info = await ghReq(R), base = info.default_branch, hasTok = !!getToken();
+  const o = x.owner, n = x.repo, R = `/repos/${o}/${n}`, info = await repoInfo(R), base = info.default_branch, hasTok = !!getToken();
   const prRaw = await ghReq(`${R}/pulls?state=all&sort=updated&direction=desc&per_page=100`).catch(e => { noRate(e); return []; }), prs = {};
   for (const p of prRaw) if (!(p.head.repo && p.head.repo.full_name !== info.full_name) && !prs[p.head.ref])
     prs[p.head.ref] = { number: p.number, state: p.merged_at ? 'MERGED' : p.state.toUpperCase(), title: p.title, url: p.html_url, draft: !!p.draft, mergeable: null, review: null, author: p.user && p.user.login, created: p.created_at, base: p.base.ref };
@@ -789,7 +818,9 @@ async function buildGraph(x, max) {
   let names, total, ciBy = {}, gq = null; const tipOf = {};
   if (hasTok) { try { gq = await ghGql(GQL_LIST, { o, n, b: Math.min(100, max + 2), base }); } catch (e) { noRate(e); } }
   if (gq) { names = gq.refs.nodes.map(r => r.name); total = gq.refs.totalCount; gq.refs.nodes.forEach(r => { ciBy[r.name] = ciFromGraphql(r.target.statusCheckRollup); tipOf[r.name] = r.target.oid; }); ciBy[base] = ciFromGraphql(gq.base && gq.base.target.statusCheckRollup); }
-  else { const brs = await ghReq(`${R}/branches?per_page=100`), have = new Set(brs.map(b => b.name)); brs.forEach(b => tipOf[b.name] = b.commit && b.commit.sha); names = [...Object.keys(prs).filter(k => have.has(k)), ...brs.map(b => b.name).filter(k => !prs[k])]; total = brs.length; }
+  else { const brs = await ghReq(`${R}/branches?per_page=100`), have = new Set(brs.map(b => b.name));
+    let recent = []; try { recent = (await ghReq(`${R}/activity?per_page=100`)).map(a => String(a.ref || '')).filter(r => r.startsWith('refs/heads/')).map(r => r.slice(11)); } catch (e) { noRate(e); }
+    /* recent pushes first */ brs.forEach(b => tipOf[b.name] = b.commit && b.commit.sha); names = [...recent.filter(k => have.has(k)), ...Object.keys(prs).filter(k => have.has(k)), ...brs.map(b => b.name).filter(k => !prs[k])]; total = brs.length; }
   names = [...new Set(names)].filter(k => k !== base).slice(0, max);
   const skipped = Math.max(0, total - 1 - max);
   const hist = await ghReq(`${R}/commits?sha=${encodeURIComponent(base)}&per_page=100`), baseNodes = {};
@@ -818,7 +849,7 @@ async function buildGraph(x, max) {
   lanes[0].commits = bchain; lanes[0].more = fullPage ? -1 : 0;
   for (const l of lanes) if (!l.is_base) l.mb_main = attachNodes(l.mb, bchain, baseNodes);
   // conflicts: GitHub's own verdict for open PRs, otherwise files changed on BOTH sides of the fork
-  await pool(lanes.filter(l => !l.is_base && l.pr && l.pr.state === 'OPEN' && l.ahead).slice(0, 8), 6, async l => {
+  await pool(lanes.filter(l => !l.is_base && l.pr && l.pr.state === 'OPEN' && l.ahead).slice(0, hasTok || (rate.remaining ?? 60) >= 35 ? 8 : 0), 6, async l => {
     try { const p = await ghReq(`${R}/pulls/${l.pr.number}`); l.pr.mergeable = p.mergeable === true ? 'MERGEABLE' : p.mergeable === false ? 'CONFLICTING' : null; } catch (e) { noRate(e); }
   });
   await pool(lanes.filter(l => !l.is_base), 6, async l => {
@@ -840,7 +871,7 @@ async function staticApi(path, opts = {}) {
   if (p === '/api/repos' && post) {
     const src = String(body.source || '').trim(), m = /^(?:https?:\/\/)?(?:www\.)?(?:github\.com\/)?([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:\/.*)?$/.exec(src);
     if (!m || /^[\/~.]/.test(src)) throw new Error('Type owner/repo or paste a github.com URL. Local folders need the local server (python3 gitdraw.py --serve).');
-    const info = await ghReq(`/repos/${m[1]}/${m[2]}`), x = { id: 'gh:' + info.full_name.toLowerCase(), kind: 'github', name: info.full_name, owner: info.owner.login, repo: info.name }, l = list();
+    const info = await repoInfo(`/repos/${m[1]}/${m[2]}`), x = { id: 'gh:' + info.full_name.toLowerCase(), kind: 'github', name: info.full_name, owner: info.owner.login, repo: info.name }, l = list();
     if (!l.some(y => y.id === x.id)) l.push(x); store.set('gc-repos', l); return { repos: l, added: x.id };
   }
   if (p === '/api/repos/remove' && post) { const l = list().filter(y => y.id !== body.id); store.set('gc-repos', l); return { repos: l }; }
@@ -848,7 +879,8 @@ async function staticApi(path, opts = {}) {
   if (p === '/api/ls') return { dirs: [] };
   if (p === '/api/graph') {
     const x = list().find(y => y.id === q.get('repo')); if (!x) throw new Error('Add a repository first.');
-    const g = await buildGraph(x, Math.max(1, Math.min(100, +q.get('max') || 25)));
+    const mx = Math.max(1, Math.min(100, +q.get('max') || 25)), ck = 'gc-cache-' + x.id + '-' + mx + (getToken() ? '-t' : ''), hit = post ? null : store.get(ck, null);
+    let g; if (hit && Date.now() - hit.t < 600000) g = hit.g; else { g = await buildGraph(x, mx); store.set(ck, { t: Date.now(), g }); }
     const cur2 = [...new Set(g.lanes.flatMap(l => l.commits.map(c => c.hash)))].sort(), key = 'gc-seen-' + x.id, prev = store.get(key, null);
     g.fresh = prev ? cur2.filter(h => !prev.includes(h)) : []; if (post || !prev) store.set(key, cur2);
     return { repo: x.name, id: x.id, ...g };
@@ -866,8 +898,12 @@ $('tokClear').onclick = () => { store.set(TOKEN_KEY, ''); renderToken(); toast('
   $('tryBox').style.display = STATIC ? '' : 'none'; $('src').placeholder = STATIC ? 'owner/repo or github.com URL' : 'owner/repo, URL, or local folder'; setPopMsg(); renderToken();
   try {
     repos = (await api('api/repos')).repos; if (!repos.some(r => r.id === cur)) cur = repos[0] ? repos[0].id : null;
-    fillRepos(); renderRepoList(); await openRepo(true);
-    if (!cur) setTimeout(() => $('repoBtn').click(), 150);
+    fillRepos(); renderRepoList();
+    const want = new URLSearchParams(location.search).get('repo') || (location.hash.length > 1 ? decodeURIComponent(location.hash.slice(1)) : '');  // shareable link: ?repo=owner/name
+    const have = want && repos.find(r => r.name.toLowerCase() === want.toLowerCase());
+    if (want && !have) { if (!cur) $('hero').classList.add('open'); $('heroSrc').value = want; await addSource(want, $('heroMsg'), $('heroGo')); }
+    else { if (have) { cur = have.id; store.set('gc-repo', cur); fillRepos(); } await openRepo(!have); }
+    if (!cur) $('hero').classList.add('open');
   } catch (e) { $('status').textContent = 'error: ' + e.message; }
 })();
 </script>
