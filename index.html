@@ -200,7 +200,7 @@
 <div id="pop" class="float pop caret">
   <div class="in"><input type="text" id="src" placeholder="owner/repo or github.com URL" spellcheck="false" autocomplete="off"><button class="tb primary" id="addGo">Add</button></div>
   <div id="sug"></div>
-  <h4 class="ph">Repositories</h4>
+  <h4 class="ph" id="repoHead">Repositories</h4>
   <div id="repoList"></div>
   <p id="popmsg" class="note"></p>
   <details id="tokenBox" style="display:none">
@@ -704,7 +704,8 @@ const openRepo = async reload => {
 const setPopMsg = () => { const m = $('popmsg'); m.className = 'note'; m.textContent = ''; };
 const fillRepos = () => { $('repoName').textContent = (repos.find(r => r.id === cur) || {}).name || 'Add a repository'; };
 function renderRepoList() {
-  $('repoList').innerHTML = repos.length ? repos.map(r => `<div class="li${r.id === cur ? ' cur' : ''}" data-id="${esc(r.id)}">${ico(r.kind === 'github' ? 'github' : 'folder')}<span class="nm">${esc(r.name)}</span><span class="kind">${r.kind === 'github' ? 'GitHub' : 'Local'}</span><button class="rm" data-rm="${esc(r.id)}" title="Remove from list" aria-label="Remove">${ico('x')}</button></div>`).join('') : '<p class="note" style="margin:0">None yet. Add one above.</p>';
+  $('repoHead').style.display = repos.length ? '' : 'none';
+  $('repoList').innerHTML = repos.length ? repos.map(r => `<div class="li${r.id === cur ? ' cur' : ''}" data-id="${esc(r.id)}">${ico(r.kind === 'github' ? 'github' : 'folder')}<span class="nm">${esc(r.name)}</span><span class="kind">${r.kind === 'github' ? 'GitHub' : 'Local'}</span><button class="rm" data-rm="${esc(r.id)}" title="Remove from list" aria-label="Remove">${ico('x')}</button></div>`).join('') : '';
 }
 $('repoList').onclick = async e => {
   const rm = e.target.closest('[data-rm]');
