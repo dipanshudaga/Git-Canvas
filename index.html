@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Git Canvas</title>
+<meta name="description" content="See any GitHub repo as a map: branches, commits, merges, conflicts, PRs and CI on an infinite canvas.">
+<meta name="theme-color" content="#1e3a8a">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   :root { --bg:#f6f6f3; --ink:#16161d; --muted:#667085; --faint:#98a2b3; --panel:#fff; --line:#e6e7eb; --accent:#4262ff;
           --ok:#1a7f37; --okbg:#dcfce7; --bad:#cf222e; --badbg:#ffe4e6; --warn:#b45309; --warnbg:#fef3c7;
@@ -18,16 +23,20 @@
 
   .float { position:fixed; z-index:5; background:var(--panel); border-radius:14px; box-shadow:var(--shadow) }
   /* centered top bar */
-  #top { top:14px; left:50%; transform:translateX(-50%); width:max-content; display:flex; align-items:center; gap:4px; padding:6px 8px; max-width:calc(100vw - 24px); flex-wrap:wrap; justify-content:center }
-  #top .logo { font-weight:800; font-size:16px; padding:0 10px 0 8px; letter-spacing:-.01em; white-space:nowrap }
-  #top select { border:0; background:#f3f4f6; font-weight:600; font-size:15px; padding:8px 10px; max-width:260px; cursor:pointer; border-radius:10px }
+  #tl { top:14px; left:14px; display:flex; align-items:center; gap:4px; padding:6px 8px 6px 10px }
+  #tl .logo { font-weight:800; font-size:16px; padding:0 8px 0 0; letter-spacing:-.01em; white-space:nowrap; display:flex; align-items:center; gap:8px }
+  .rb { background:#f1f2f5; border-radius:10px; padding:7px 11px; font-weight:650; font-size:15px; max-width:280px; display:inline-flex; gap:8px; align-items:center } .rb:hover,.rb.on { background:#e5e8ee }
+  .rb #repoName { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+
+
   .tb { padding:8px 13px; border-radius:10px; font-weight:600; font-size:14.5px; white-space:nowrap; position:relative }
   .tb:hover { background:#f1f2f5 } .tb:disabled { opacity:.5; cursor:progress }
   .tb.primary { background:var(--accent); color:#fff } .tb.primary:hover { background:#3350e0 }
   .tb .badge { background:var(--accent); color:#fff; border-radius:10px; font-size:11px; padding:0 6px; margin-left:6px; font-weight:700 }
   .sep { width:1px; height:22px; background:var(--line); margin:0 4px }
-  #status { position:fixed; top:68px; left:50%; transform:translateX(-50%); z-index:4; font-size:13.5px; color:var(--muted); background:rgba(255,255,255,.85); backdrop-filter:blur(6px); padding:4px 14px; border-radius:20px; box-shadow:0 0 0 1px var(--line); white-space:nowrap; max-width:calc(100vw - 24px); overflow:hidden; text-overflow:ellipsis }
-  body.side #top, body.side #status, body.side .pop { left:calc((100vw - 404px) / 2) }
+  #status { position:fixed; top:70px; left:16px; z-index:4; font-size:13.5px; color:var(--muted); background:rgba(255,255,255,.85); backdrop-filter:blur(6px); padding:3px 12px; border-radius:20px; box-shadow:0 0 0 1px var(--line); white-space:nowrap; max-width:min(620px, calc(100vw - 32px)); overflow:hidden; text-overflow:ellipsis }
+  #dock { bottom:14px; left:50%; transform:translateX(-50%); width:max-content; max-width:calc(100vw - 24px); display:flex; align-items:center; gap:2px; padding:6px 8px }
+  body.side #dock { left:calc((100vw - 404px) / 2) }
   #zoom { right:14px; bottom:14px; display:flex; align-items:center; padding:5px }
   #zoom button { width:36px; height:36px; border-radius:10px; font-size:19px } #zoom button:hover { background:#f1f2f5 }
   #zl { min-width:54px; text-align:center; color:var(--muted); font-size:14px; font-variant-numeric:tabular-nums }
@@ -38,16 +47,18 @@
   #edges { position:absolute; left:0; top:0; overflow:visible; pointer-events:none }
 
   /* branch title: sits right above its commits */
-  .head { position:absolute; width:256px; height:100px; border-radius:14px; padding:11px 14px; color:#fff; cursor:grab; box-shadow:0 3px 10px rgba(0,0,0,.18); user-select:none }
+  .head { position:absolute; width:256px; height:116px; border-radius:14px; padding:11px 14px; color:#fff; cursor:grab; box-shadow:0 3px 10px rgba(0,0,0,.18); user-select:none }
   .head .n { font-weight:800; font-size:18px; line-height:1.2; display:flex; gap:7px; align-items:center }
   .head .n span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+  .head .when { margin-top:7px; font-size:12.5px; font-weight:600; opacity:.92 }
+  .pr .d { position:absolute; left:13px; bottom:9px; font-size:12.5px; color:var(--muted); font-weight:600 }
   .head .sub { margin-top:7px; display:flex; gap:5px; flex-wrap:wrap }
   .chip { background:rgba(255,255,255,.26); border-radius:20px; padding:1px 9px; font-weight:700; font-size:12.5px; white-space:nowrap }
   .chip.ok { background:#fff; color:var(--ok) } .chip.bad { background:#fff; color:var(--bad) } .chip.warn { background:#fff; color:var(--warn) }
   .head.stale { filter:saturate(.55) } .head.dragging,.card.dragging,.pr.dragging { cursor:grabbing; z-index:50 }
 
   /* pull request card */
-  .pr { position:absolute; width:256px; height:96px; border-radius:14px; padding:10px 13px; background:#fff; border:2px solid; cursor:grab; box-shadow:0 2px 8px rgba(0,0,0,.10); user-select:none }
+  .pr { position:absolute; width:256px; height:108px; border-radius:14px; padding:10px 13px; background:#fff; border:2px solid; cursor:grab; box-shadow:0 2px 8px rgba(0,0,0,.10); user-select:none }
   .pr .t { display:flex; align-items:center; gap:7px; font-size:12.5px; font-weight:700 }
   .pill { display:inline-block; font-size:12px; font-weight:700; border-radius:20px; padding:1px 9px; white-space:nowrap }
   .pr .m { margin-top:4px; font-weight:650; font-size:14.5px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
@@ -71,10 +82,10 @@
   .more:hover { background:#f4f4f6 } .more.note { cursor:default; color:var(--muted); border-color:#c9c9d1; font-weight:500; font-size:13px; text-align:center; line-height:1.2; padding:0 10px; height:auto; min-height:40px }
 
   .tags { position:absolute; left:10px; top:-13px; display:flex; gap:4px; z-index:2 }
-  .tagchip { background:#fff7d6; color:#8a5a00; border:1.5px solid #f2c94c; border-radius:10px; font-size:11.5px; font-weight:800; padding:0 8px; line-height:18px; white-space:nowrap; box-shadow:0 1px 2px rgba(0,0,0,.12); max-width:150px; overflow:hidden; text-overflow:ellipsis }
+  .tagchip { background:#eef2f7; color:#334155; border:1.5px solid #cbd5e1; border-radius:10px; font-size:11.5px; font-weight:800; padding:0 8px; line-height:18px; white-space:nowrap; box-shadow:0 1px 2px rgba(0,0,0,.12); max-width:150px; overflow:hidden; text-overflow:ellipsis }
   .ci { display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; font-size:11px; font-weight:800; color:#fff; margin-right:6px; flex:none; vertical-align:middle }
   .ci.success { background:#1a7f37 } .ci.failure { background:#cf222e } .ci.pending { background:#d4a006 }
-  .dim { opacity:.2; transition:opacity .15s } .head,.card,.pr { transition:opacity .15s }
+  .dim { opacity:.2 } .head,.card,.pr,.more { transition:opacity .25s }
   .checks { list-style:none; margin:0; padding:0; border-radius:10px; box-shadow:0 0 0 1px var(--line) inset; overflow:hidden }
   .checks li { padding:8px 12px; border-bottom:1px solid var(--line); display:flex; align-items:center; font-size:14px; gap:2px } .checks li:last-child { border:0 }
   .checks a { color:inherit; text-decoration:none } .checks a:hover { text-decoration:underline }
@@ -107,11 +118,19 @@
   .bar { height:10px; border-radius:5px; background:#eceef2; display:flex; overflow:hidden; margin-top:8px }
 
   /* popovers */
-  .pop { top:124px; left:50%; transform:translateX(-50%); width:min(460px, calc(100vw - 24px)); padding:18px; display:none; z-index:7 }
-  .pop.open { display:block } .pop h3 { margin:0 0 12px; font-size:16px }
+  .pop { position:fixed; width:320px; padding:14px; display:none; z-index:7; font-size:14px }
+  .pop.caret::before { content:""; position:absolute; top:-6px; left:var(--cx,40px); width:12px; height:12px; background:#fff; transform:rotate(45deg); border-radius:2px }
+  .pop.up.caret::before { top:auto; bottom:-6px }
+  .in { display:flex; gap:6px } .in input { flex:1 1 0; min-width:0 } .ph { margin:14px 0 6px; font-size:12px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--faint) }
+  .note { color:var(--muted); font-size:13px; margin:8px 0 0 } .note.err { color:var(--bad) }
+  .li { display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:9px; font-weight:600; cursor:pointer } .li:hover { background:#f3f4f7 } .li.cur { background:#eef1ff }
+  .li .nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap } .li i { margin-left:auto; font-style:normal; font-size:11px; font-weight:700; color:#667085; background:#f1f2f5; border-radius:8px; padding:0 7px; flex:none }
+  .li .rm { color:var(--faint); width:22px; height:22px; border-radius:6px; font-size:12px; flex:none } .li .rm:hover { background:#e5e7eb; color:var(--bad) }
+  .try { display:inline-block; margin:4px 6px 0 0; padding:2px 10px; border-radius:20px; background:#f1f2f5; font-weight:600; font-size:13px; cursor:pointer } .try:hover { background:#e5e8ee }
+  .pop.open { display:block } .pop h3 { margin:0 0 8px; font-size:15px }
   .pop .row { display:flex; gap:8px }
-  .pop input[type=text] { flex:1; border:0; border-radius:10px; padding:10px 12px; outline:none; box-shadow:0 0 0 1.5px var(--line) inset; font-size:15px }
-  .pop input[type=text]:focus { box-shadow:0 0 0 2px var(--accent) inset }
+  .pop input { flex:1; border:0; border-radius:10px; padding:10px 12px; outline:none; box-shadow:0 0 0 1.5px var(--line) inset; font-size:15px }
+  .pop input:focus { box-shadow:0 0 0 2px var(--accent) inset }
   .pop p { margin:12px 0 0; color:var(--muted); font-size:13.5px } .pop p.err { color:var(--bad) }
   .seg { display:inline-flex; background:#f1f2f5; border-radius:10px; padding:3px; gap:2px }
   .seg button { padding:6px 12px; border-radius:8px; font-weight:650; font-size:14px; color:#475467 } .seg button.on { background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.15); color:var(--ink) }
@@ -122,7 +141,7 @@
   #sug { margin-top:8px; border-radius:10px; max-height:200px; overflow:auto; display:none; box-shadow:0 0 0 1px var(--line) inset; padding:4px }
   #sug.open { display:block } #sug div { padding:7px 9px; border-radius:7px; cursor:pointer; display:flex; gap:8px; font-size:14px }
   #sug div.on,#sug div:hover { background:#eef1ff } #sug i { font-style:normal; margin-left:auto; font-size:11px; font-weight:700; color:#15803d; background:#dcfce7; border-radius:8px; padding:1px 8px }
-  #help { right:14px; bottom:68px; padding:16px 18px; width:360px; display:none; font-size:14px; line-height:1.55 }
+  #help { right:14px; bottom:68px; padding:14px 16px; width:320px; display:none; font-size:14px; line-height:1.55 }
   #help.open { display:block } #help h3 { margin:0 0 8px; font-size:15px } #help li { margin:5px 0 } #help ul { margin:0; padding-left:18px }
   .sw { display:inline-block; width:22px; height:0; border-top:3px solid; vertical-align:middle; margin-right:6px } .sw.d { border-top-style:dashed }
   #empty { position:fixed; inset:0; display:none; place-items:center; color:var(--muted); pointer-events:none; text-align:center; font-size:16px; padding:0 20%; z-index:1 }
@@ -133,41 +152,49 @@
 <div id="viewport"><div id="world"><svg id="edges"></svg></div></div>
 <div id="empty"><div id="emptyMsg"></div></div>
 
-<div id="top" class="float">
-  <span class="logo">◈ Git Canvas</span>
-  <select id="repo" aria-label="Repository"></select>
-  <button class="tb" id="rmBtn" title="Remove this repo from the list">✕</button>
-  <button class="tb" id="addBtn">+ Add repo</button>
-  <span class="sep"></span>
-  <button class="tb" id="filtBtn">⚙ Filters<span class="badge" id="filtN" style="display:none"></span></button>
-  <button class="tb" id="hotBtn">🔥 Hot files<span class="badge" id="hotN" style="display:none"></span></button>
-  <button class="tb" id="expAll">Expand all</button>
-  <button class="tb primary" id="reload" title="Re-read the repo and mark what's new">⟳ Reload</button>
+<div id="tl" class="float">
+  <span class="logo"><svg viewBox="0 0 64 64" width="24" height="24" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#1e3a8a"/><path d="M22 16V48" stroke="#fff" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M22 48C22 38 42 42 42 30V20" stroke="#93c5fd" stroke-width="4.5" stroke-linecap="round" fill="none"/><circle cx="22" cy="16" r="6.5" fill="#22c55e" stroke="#1e3a8a" stroke-width="2.5"/><circle cx="22" cy="32" r="6" fill="#fff" stroke="#1e3a8a" stroke-width="2.5"/><circle cx="22" cy="48" r="6" fill="#fff" stroke="#1e3a8a" stroke-width="2.5"/><circle cx="42" cy="20" r="6" fill="#93c5fd" stroke="#1e3a8a" stroke-width="2.5"/></svg>Git Canvas</span>
+  <button class="rb" id="repoBtn" data-pop="pop" aria-haspopup="true"><span id="repoName">…</span><span aria-hidden="true">▾</span></button>
 </div>
 <div id="status" role="status">loading…</div>
 
-<div id="pop" class="float pop">
-  <h3>Add a repository</h3>
-  <div class="row"><input type="text" id="src" placeholder="owner/repo, github.com URL, or local folder" spellcheck="false" autocomplete="off"><button class="tb primary" id="addGo">Add</button></div>
-  <div id="sug"></div>
-  <p id="popmsg">Paste a GitHub URL or <code>owner/repo</code> (read via the GitHub API with your <code>gh</code> login, nothing is cloned). For a local folder, start typing a path (<code>/</code> or <code>~</code>).</p>
+<div id="dock" class="float">
+  <button class="tb" id="filtBtn" data-pop="filt">⚙ Filters<span class="badge" id="filtN" style="display:none"></span></button>
+  <button class="tb" id="hotBtn" data-pop="hotpop">🔥 Hot files<span class="badge" id="hotN" style="display:none"></span></button>
+  <button class="tb" id="expAll">Expand all</button>
+  <span class="sep"></span>
+  <button class="tb primary" id="reload" title="Re-read the repo and mark what's new">⟳ Reload</button>
 </div>
 
-<div id="filt" class="float pop">
+<div id="pop" class="float pop caret" style="width:350px">
+  <div class="in"><input type="text" id="src" placeholder="owner/repo or github.com URL" spellcheck="false" autocomplete="off"><button class="tb primary" id="addGo">Add</button></div>
+  <div id="sug"></div>
+  <div id="tryBox" class="note" style="display:none">Try: <span class="try" data-try="tauri-apps/tauri">tauri-apps/tauri</span><span class="try" data-try="facebook/react">facebook/react</span><span class="try" data-try="vercel/next.js">vercel/next.js</span></div>
+  <h4 class="ph">Repositories</h4>
+  <div id="repoList"></div>
+  <p id="popmsg" class="note"></p>
+  <div id="tokenBox" style="display:none">
+    <h4 class="ph">GitHub access (optional)</h4>
+    <div class="in"><input type="password" id="tok" autocomplete="off" spellcheck="false"><button class="tb primary" id="tokSave">Save</button></div>
+    <p class="note">Public repos work without one (60 requests/hour). A <b>read-only token</b> gives 5,000/hour, CI status, exact conflict checks and <b>private repos</b>. It stays in this browser and only goes to api.github.com. <a class="link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create one ↗</a> <button class="try" id="tokClear" style="display:none">Remove saved token</button></p>
+    <p class="note" id="rateInfo"></p>
+  </div>
+</div>
+
+<div id="filt" class="float pop caret" style="width:370px">
   <h3>Which branches to show</h3>
   <div class="frow"><label>Load up to<small>Most recently updated first</small></label><div class="seg" id="fMax"></div></div>
   <div class="frow"><label>Hide stale branches<small>No commits for at least…</small></label><div class="seg" id="fStale"></div></div>
   <div class="frow"><label>Hide fully merged<small>Already inside the main line</small></label><button class="switch" id="fMerged" aria-label="Hide fully merged"></button></div>
-  <div class="frow"><label>Only branches with conflicts<small>Would clash with the main line</small></label><button class="switch" id="fConf" aria-label="Only conflicting"></button></div>
-  <p id="fSummary"></p>
+  <div class="frow"><label>Only with conflicts<small>Would clash with the main line</small></label><button class="switch" id="fConf" aria-label="Only conflicting"></button></div>
+  <p id="fSummary" class="note"></p>
 </div>
 
-<div id="hotpop" class="float pop">
+<div id="hotpop" class="float pop caret">
   <h3>🔥 Hot files</h3>
-  <p style="margin:0">Files changed on <b>more than one</b> branch. When those branches land, these are where they can collide. Click a file to highlight the branches touching it.</p>
+  <p class="note" style="margin:0">Changed on <b>more than one</b> branch, so these are where branches can collide. Click a file to highlight its branches.</p>
   <div id="hotList"></div>
 </div>
-
 
 <div id="help" class="float">
   <h3>How to read this board</h3>
@@ -189,22 +216,28 @@
 <script>
 const $ = id => document.getElementById(id), vp = $('viewport'), world = $('world'), edges = $('edges');
 const store = { get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+let STATIC = false;  // true when there is no local server (GitHub Pages / file): talk to api.github.com straight from the browser
 const api = async (path, opts = {}) => {
-  const r = await fetch(path, { ...opts, headers: { 'X-Gitdraw': '1', 'Content-Type': 'application/json' } });
+  if (STATIC) return staticApi(path, opts);
+  const r = await fetch(path.replace(/^\//, ''), { ...opts, headers: { 'X-Gitdraw': '1', 'Content-Type': 'application/json' } });
   const j = await r.json(); if (j.error) throw new Error(j.error); return j;
 };
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const toast = t => { const n = $('toast'); n.textContent = t; n.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => n.style.display = 'none', 1600); };
 
 // ---------- constants ----------
-const CW = 256, CH = 112, PRH = 96, HEAD_H = 100, COLX = 330, ROWY = 144, GAP_HEAD = 26, START = 6;
-const BASE_COLOR = '#16a34a';
-const COLORS = ['#4262ff', '#f97316', '#a855f7', '#ec4899', '#0ea5e9', '#d4a006', '#ef4444', '#14b8a6', '#8b5cf6', '#65a30d'];
+const CW = 256, CH = 112, PRH = 108, HEAD_H = 116, COLX = 330, ROWY = 144, GAP_HEAD = 26, START = 6;
+const BASE_COLOR = '#15803d';
+const hsl = (h, sat, l) => { sat /= 100; l /= 100; const k = n => (n + h / 30) % 12, a = sat * Math.min(l, 1 - l), f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))); return '#' + [f(0), f(8), f(4)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join(''); };
+// one hue for every branch (blue), told apart by shade; green is reserved for the main line, red/amber/green only mean conflict/warning/ok
+const COLORS = [[222, 60, 26], [222, 72, 38], [222, 80, 50], [216, 50, 34], [228, 66, 44], [220, 76, 46]].map(c => hsl(...c));
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const fmtDate = s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? `${m[3]} ${MON[+m[2] - 1]} '${m[1].slice(2)}` : (s || ''); };
 const tint = (hex, a = .14) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
-const AV = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#ec4899'];
+const AV = ['#64748b', '#475569', '#7c8aa0', '#334155', '#56657a', '#8795a8', '#3f4f66', '#6b7a90'];
 const avColor = n => AV[[...n].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
 const initials = n => (n.match(/\b\w/g) || ['?']).slice(0, 2).join('').toUpperCase();
-const PRS = { OPEN: ['#1a7f37', '#dcfce7', 'Open'], DRAFT: ['#57606a', '#eaeef2', 'Draft'], MERGED: ['#8250df', '#f1e8ff', 'Merged'], CLOSED: ['#cf222e', '#ffe4e6', 'Closed'] };
+const PRS = { OPEN: ['#15803d', '#dcfce7', 'Open'], DRAFT: ['#57606a', '#eaeef2', 'Draft'], MERGED: ['#475569', '#e2e8f0', 'Merged'], CLOSED: ['#cf222e', '#ffe4e6', 'Closed'] };
 const prState = pr => pr.draft && pr.state === 'OPEN' ? 'DRAFT' : pr.state;
 const CI = { success: ['✓', 'Passing', 'ok'], failure: ['✗', 'Failing', 'bad'], pending: ['●', 'Running', 'warn'] };
 const ciDot = ci => ci ? `<span class="ci ${ci.state}" title="CI: ${CI[ci.state][1].toLowerCase()}">${CI[ci.state][0]}</span>` : '';
@@ -258,7 +291,7 @@ function layout() {
     ln.headItem = add('head:' + ln.name, 'head', ln, ln.x, y - GAP_HEAD - HEAD_H, CW, HEAD_H);
     const lowest = ln.cards.length ? Math.max(...ln.cards.map(k => k.y)) : y0;
     ln.moreItem = null;
-    if (ln.hiddenLocal > 0 || (ln.open && ln.commits.length > START) || ln.more > 0)
+    if (ln.hiddenLocal > 0 || (ln.open && ln.commits.length > START) || (ln.more || 0) !== 0)
       ln.moreItem = add('more:' + ln.name, 'more', ln, ln.x, lowest + CH + 22, CW, 40);
   }
   return { lanes, items, forkOf, at: Object.fromEntries(Object.values(items).filter(i => i.kind === 'card').map(i => [i.c.hash, i])), row };
@@ -266,35 +299,56 @@ function layout() {
 
 // effective position = layout + lane offset + own offset
 const off = k => offs[k] || [0, 0];
-const pos = it => { const a = off('L:' + it.ln.name), b = off(it.key); return { x: it.x + a[0] + b[0], y: it.y + a[1] + b[1] }; };
+let OV = {};  // in-flight animation positions
+const truePos = it => { const a = off('L:' + it.ln.name), b = off(it.key); return { x: it.x + a[0] + b[0], y: it.y + a[1] + b[1] }; };
+const pos = it => OV[it.key] || truePos(it);
 const isMoved = it => { const a = off('L:' + it.ln.name), b = off(it.key); return a[0] || a[1] || b[0] || b[1]; };
 const rectOf = it => { const p = pos(it); return { x: p.x, y: p.y, w: it.w, h: it.h }; };
 
 // ---------- drawing ----------
-const els = {};
-function draw() {
+let els = {}, tweenId = 0;
+const clearBoard = () => { tweenId++; OV = {}; world.querySelectorAll('.head,.card,.pr,.more').forEach(n => n.remove()); els = {}; edges.innerHTML = ''; };
+function tween(from) {
+  const id = ++tweenId, t0 = performance.now(), D = 340, items = Object.values(L.items).filter(it => from[it.key]);
+  const step = now => {
+    if (id !== tweenId) return;
+    const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 3);
+    OV = {};
+    if (k < 1) for (const it of items) { const f = from[it.key], t = truePos(it); OV[it.key] = { x: f.x + (t.x - f.x) * e, y: f.y + (t.y - f.y) * e }; }
+    Object.values(L.items).forEach(place); drawEdges();
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+function draw(animate = true) {
+  const old = {};
+  if (L && animate) for (const it of Object.values(L.items)) old[it.key] = pos(it);
+  OV = {};
   L = layout();
-  world.querySelectorAll('.head,.card,.pr,.more').forEach(n => n.remove());
-  const frag = document.createDocumentFragment(), fresh = new Set(data.fresh || []);
-  const mk = (it, cls, html) => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; d.dataset.key = it.key; frag.appendChild(d); els[it.key] = d; place(it); return d; };
+  const frag = document.createDocumentFragment(), fresh = new Set(data.fresh || []), seenKeys = new Set(), created = [];
+  const mk = (it, cls, html) => {
+    let d = els[it.key];
+    if (!d || !d.isConnected) { d = document.createElement('div'); d.dataset.key = it.key; frag.appendChild(d); els[it.key] = d; created.push(d); }
+    d.className = cls; d.innerHTML = html; d.onclick = null; seenKeys.add(it.key); place(it); return d;
+  };
   for (const ln of L.lanes) {
     const cf = ln.conflict, st = cf && cf.state;
     let chips = ln.is_base ? '<span class="chip">main line</span>' : ln.ahead === 0 ? '<span class="chip">fully merged ✓</span>' : `<span class="chip">↑${ln.ahead}</span>` + (ln.behind ? `<span class="chip">↓${ln.behind}</span>` : '');
     if (!ln.is_base && ln.ahead) chips += st === 'conflict' ? '<span class="chip bad">⚠ conflicts</span>' : st === 'possible' ? '<span class="chip warn">⚠ may conflict</span>' : st === 'clean' ? '<span class="chip ok">✓ clean</span>' : '';
     if (ln.ci) chips += `<span class="chip ${CI[ln.ci.state][2]}">${CI[ln.ci.state][0]} CI</span>`;
     if (!ln.is_base && ageDays(ln) > 60) chips += `<span class="chip">⏱ ${Math.round(ageDays(ln) / 30)}mo</span>`;
-    mk(ln.headItem, `head${ageDays(ln) > 180 && !ln.is_base ? ' stale' : ''}`, `<div class="n">⑂ <span title="${esc(ln.name)}">${esc(ln.name)}</span></div><div class="sub">${chips}</div>`).style.background = ln.color;
+    mk(ln.headItem, `head${ageDays(ln) > 180 && !ln.is_base ? ' stale' : ''}`, `<div class="n">⑂ <span title="${esc(ln.name)}">${esc(ln.name)}</span></div><div class="sub">${chips}</div><div class="when">${ln.commits.length ? (ln.is_base ? 'Latest ' : 'Updated ') + esc(fmtDate(ln.commits[0].date)) : ''}</div>`).style.background = ln.color;
     if (ln.prItem) {
       const pr = ln.pr, sk = prState(pr), col = PRS[sk] || PRS.OPEN;
       const m = pr.state !== 'OPEN' ? '' : st === 'conflict' || pr.mergeable === 'CONFLICTING' ? '<span class="pill" style="background:var(--badbg);color:var(--bad)">⚠ conflicts</span>' : st === 'possible' ? '<span class="pill" style="background:var(--warnbg);color:var(--warn)">⚠ may conflict</span>' : '<span class="pill" style="background:var(--okbg);color:var(--ok)">✓ can merge</span>';
-      mk(ln.prItem, 'pr', `<div class="t"><span class="pill" style="background:${col[1]};color:${col[0]}">⇄ ${col[2]}</span><span style="color:var(--muted)">#${pr.number}</span>${ciDot(ln.ci)}<span style="margin-left:auto">${m}</span></div><div class="m">${esc(pr.title)}</div>`).style.borderColor = col[0];
+      mk(ln.prItem, 'pr', `<div class="t"><span class="pill" style="background:${col[1]};color:${col[0]}">⇄ ${col[2]}</span><span style="color:var(--muted)">#${pr.number}</span>${ciDot(ln.ci)}<span style="margin-left:auto">${m}</span></div><div class="m">${esc(pr.title)}</div>${pr.created ? `<div class="d">Opened ${esc(fmtDate(pr.created))}</div>` : ''}`).style.borderColor = col[0];
     }
   }
   for (const it of Object.values(L.items)) if (it.kind === 'card') {
     const c = it.c, ln = it.ln, merge = c.parents.length > 1, fork = ln.is_base && L.forkOf[c.hash], unp = c.unpushed && ln.upstream;
-    const tag = merge ? `<span class="tag" style="color:${ln.color}">MERGE</span>` : fork ? `<span class="tag" style="color:#c2410c" title="${esc(fork.join(', '))} last shared history with this line here">SPLIT</span>` : '';
+    const tag = merge ? `<span class="tag" style="color:${ln.color}">MERGE</span>` : fork ? `<span class="tag" style="color:#475569" title="${esc(fork.join(', '))} last shared history with this line here">SPLIT</span>` : '';
     const d = mk(it, `card${unp ? ' unpushed' : ''}${merge ? ' merge' : ''}${fresh.has(c.hash) ? ' fresh' : ''}`,
-      `${tagsHtml(c.hash)}<div class="r1"><span class="h" style="color:${ln.color}">${esc(c.short)}</span><span>${it === ln.tip ? ciDot(ln.ci) : ''}${esc(c.date)}</span></div><div class="m">${esc(c.msg)}</div>
+      `${tagsHtml(c.hash)}<div class="r1"><span class="h" style="color:${ln.color}">${esc(c.short)}</span><span>${it === ln.tip ? ciDot(ln.ci) : ''}${esc(fmtDate(c.date))}</span></div><div class="m">${esc(c.msg)}</div>
        <div class="a"><span class="av" style="background:${avColor(c.author)}">${esc(initials(c.author))}</span><b>${esc(c.author)}</b>${tag}</div>`);
     const t = tint(ln.color, merge ? .28 : .14);
     d.style.background = `linear-gradient(${t},${t}),#fff`; d.style.borderColor = ln.color;
@@ -303,10 +357,15 @@ function draw() {
     const it = ln.moreItem, hid = ln.hiddenLocal;
     if (hid > 0) { const d = mk(it, 'more', `▾ Show ${hid} older commit${hid > 1 ? 's' : ''}`); d.style.borderColor = d.style.color = ln.color; d.onclick = () => toggleLane(ln.name); }
     else if (ln.open && ln.commits.length > START) { const d = mk(it, 'more', '▴ Collapse'); d.style.borderColor = d.style.color = ln.color; d.onclick = () => toggleLane(ln.name); }
-    else mk(it, 'more note', `+${ln.more} even older not loaded${data.github ? ' (GitHub API limit)' : ''}`);
+    else mk(it, 'more note', `${ln.more > 0 ? '+' + ln.more + ' even older not loaded' : 'Older history not loaded'}${data.github ? ' (GitHub API limit)' : ''}`);
   }
+  for (const k of Object.keys(els)) if (!seenKeys.has(k)) { const d = els[k]; delete els[k]; d.style.opacity = 0; d.style.pointerEvents = 'none'; setTimeout(() => d.remove(), 260); }
   world.appendChild(frag);
   if (selKey && els[selKey]) els[selKey].classList.add('sel');
+  if (Object.keys(old).length) {
+    created.forEach(d => { d.style.opacity = 0; requestAnimationFrame(() => requestAnimationFrame(() => d.style.opacity = '')); });
+    tween(old);
+  }
   drawEdges(); computeHot(); applyDim();
   $('empty').style.display = 'none';
 }
@@ -378,7 +437,7 @@ function conflictCallout(ln, list = true) {
   if (cf.state === 'conflict') return `<div class="callout bad"><b class="t">⚠ Merge conflict${n ? ` in ${n} file${n > 1 ? 's' : ''}` : ''}</b>Both <b>${esc(ln.name)}</b> and <b>${esc(base)}</b> changed the same lines${cf.source === 'pr' ? ' (GitHub says this PR can\'t be merged as-is)' : ''}. Git can't pick a winner, so a human must choose, usually the branch's author.</div>${n && list ? `<h4>Conflicting files</h4>${fileList(cf.files, cf.files)}` : ''}`;
   if (cf.state === 'possible') return `<div class="callout warn"><b class="t">⚠ May conflict</b>${n} file${n > 1 ? 's were' : ' was'} changed on <b>both</b> sides. They only clash if the exact same lines changed, and that can't be checked without cloning.</div>${list ? `<h4>Files changed on both sides</h4>${fileList(cf.files, cf.files)}` : ''}`;
   if (cf.state === 'clean') return `<div class="callout ok"><b class="t">✓ Merges cleanly</b>${ln.behind ? `<b>${esc(base)}</b> moved on, but in different places from this branch.` : `<b>${esc(base)}</b> hasn't changed since this branch split off.`}</div>`;
-  return `<div class="callout info"><b class="t">Conflict check unavailable</b>Needs Git 2.38+ locally, or GitHub API access.</div>`;
+  return `<div class="callout info"><b class="t">Conflict check unavailable</b>Needs Git 2.38+ locally, or more GitHub API quota (add a token).</div>`;
 }
 function inspect(key) {
   const it = L && L.items[key], s = $('side'); if (!it) return;
@@ -390,12 +449,12 @@ function inspect(key) {
     const parents = c.parents.map(p => L.at[p] ? `<a class="link" data-goto="${esc(p)}"><code>${esc(L.at[p].c.short)}</code></a>` : `<code>${esc(p.slice(0, 7))}</code>`).join(' + ');
     let why = merge ? `<div class="callout info"><b class="t">This is a merge commit</b>It joins two lines of work (${parents}) into <b>${esc(ln.name)}</b>. If both sides had changed the same lines, Git would have stopped and asked a human to resolve a <b>conflict</b>.</div>`
       : `<div class="callout info"><b class="t">A saved snapshot</b>${c.parents.length ? `Built on top of ${parents}. Following these links backwards walks the project's history.` : 'This is the very first commit. Everything else was built on it.'}</div>`;
-    if (fork) why += `<div class="callout warn"><b class="t">Split point</b>${fork.map(esc).join(', ')} and <b>${esc(ln.name)}</b> last shared history here. Anything added to <b>${esc(ln.name)}</b> after this is invisible to that branch until it merges or rebases.</div>`;
+    if (fork) why += `<div class="callout info"><b class="t">Split point</b>${fork.map(esc).join(', ')} and <b>${esc(ln.name)}</b> last shared history here. Anything added to <b>${esc(ln.name)}</b> after this is invisible to that branch until it merges or rebases.</div>`;
     if (c.unpushed && ln.upstream) why += `<div class="callout warn"><b class="t">Not pushed yet</b>This commit exists only on your computer. Teammates can't see it.</div>`;
     const tg = (data.tags || {})[c.hash];
-    if (tg) why += `<div class="callout warn" style="background:#fff7d6;color:#6b4500"><b class="t">🏷 ${tg.map(esc).join(', ')}</b>A tag is a permanent name for one exact commit, usually a release. Unlike a branch, it never moves.</div>`;
+    if (tg) why += `<div class="callout info"><b class="t">🏷 ${tg.map(esc).join(', ')}</b>A tag is a permanent name for one exact commit, usually a release. Unlike a branch, it never moves.</div>`;
     band = band_(ln.color, 'Commit', c.msg);
-    body = `<dl class="kv" style="margin-top:16px">${kvRow('Branch', laneChip(ln))}${kvRow('Author', `<span class="av" style="background:${avColor(c.author)}">${esc(initials(c.author))}</span>${esc(c.author)}`)}${kvRow('When', `${esc(c.date)} <span style="color:var(--muted)">· ${ago(c.ct)}</span>`)}${kvRow('Built on', parents || '-')}${kvRow('ID', `<code>${esc(c.short)}</code>`)}</dl>${why}
+    body = `<dl class="kv" style="margin-top:16px">${kvRow('Branch', laneChip(ln))}${kvRow('Author', `<span class="av" style="background:${avColor(c.author)}">${esc(initials(c.author))}</span>${esc(c.author)}`)}${kvRow('When', `${esc(fmtDate(c.date))} <span style="color:var(--muted)">· ${ago(c.ct)}</span>`)}${kvRow('Built on', parents || '-')}${kvRow('ID', `<code>${esc(c.short)}</code>`)}</dl>${why}
       ${it === ln.tip ? checksSection(ln.ci) : ''}<h4>Try it</h4>${cmd('git show ' + c.short)}<div class="cmdnote">See exactly what this commit changed.</div>${cmd('git checkout ' + c.short)}<div class="cmdnote">Look around the project as it was at this moment.</div>`;
   } else if (it.kind === 'pr') {
     const pr = it.pr, sk = prState(pr), col = PRS[sk] || PRS.OPEN, bl = L.lanes[0];
@@ -458,7 +517,7 @@ function applyDim() {
   const keep = hotFile ? new Set((HOT.find(h => h.file === hotFile) || { lanes: [] }).lanes.map(l => l.name)) : null;
   for (const it of Object.values(L.items)) { const d = els[it.key]; if (d) d.classList.toggle('dim', !!keep && !it.ln.is_base && !keep.has(it.ln.name)); }
 }
-$('hotBtn').onclick = () => { closePops($('hotpop')); $('hotpop').classList.toggle('open'); renderHot(); };
+$('hotBtn').onclick = () => { if (togglePop($('hotpop'), $('hotBtn'), true)) { renderHot(); anchorPop($('hotpop'), $('hotBtn'), true); } };
 $('hotList').onclick = e => {
   const l = e.target.closest('[data-lane]');
   if (l) { const ln = L.lanes.find(x => x.name === l.dataset.lane); if (ln) { e.stopPropagation(); focusKey(ln.headItem.key, true); } return; }
@@ -488,9 +547,19 @@ seg('fMax', [[10, '10'], [25, '25'], [50, '50'], [100, '100']], 'max', () => { s
 seg('fStale', [[0, 'Off'], [30, '30d'], [90, '90d'], [365, '1y']], 'stale', applyFilters);
 $('fMerged').onclick = () => { flt.merged = !flt.merged; applyFilters(); };
 $('fConf').onclick = () => { flt.conf = !flt.conf; applyFilters(); };
-const closePops = except => document.querySelectorAll('.pop').forEach(p => p !== except && p.classList.remove('open'));
-$('filtBtn').onclick = () => { closePops($('filt')); $('filt').classList.toggle('open'); syncFilters(); };
-$('addBtn').onclick = () => { closePops($('pop')); $('pop').classList.toggle('open'); $('src').focus(); };
+const closePops = () => { document.querySelectorAll('.pop').forEach(p => p.classList.remove('open')); document.querySelectorAll('[data-pop]').forEach(b => b.classList.remove('on')); };
+function anchorPop(pop, btn, up) {
+  const r = btn.getBoundingClientRect(), w = pop.offsetWidth, cx = r.left + r.width / 2, left = Math.max(12, Math.min(cx - 44, innerWidth - w - 12));
+  pop.style.left = left + 'px'; pop.style.setProperty('--cx', Math.max(14, cx - left - 6) + 'px'); pop.classList.toggle('up', up);
+  if (up) { pop.style.top = 'auto'; pop.style.bottom = (innerHeight - r.top + 12) + 'px'; } else { pop.style.bottom = 'auto'; pop.style.top = (r.bottom + 12) + 'px'; }
+}
+function togglePop(pop, btn, up) {
+  const was = pop.classList.contains('open'); closePops(); $('help').classList.remove('open'); if (was) return false;
+  pop.classList.add('open'); btn.classList.add('on'); anchorPop(pop, btn, up); return true;
+}
+$('filtBtn').onclick = () => { if (togglePop($('filt'), $('filtBtn'), true)) { syncFilters(); anchorPop($('filt'), $('filtBtn'), true); } };
+$('repoBtn').onclick = () => { if (togglePop($('pop'), $('repoBtn'), false)) { renderRepoList(); $('src').focus(); } };
+window.addEventListener('resize', closePops);
 
 // ---------- view ----------
 const applyView = () => {
@@ -562,49 +631,61 @@ window.addEventListener('pointerup', e => {
 const busy = (on, msg) => { $('reload').disabled = on; if (msg) $('status').textContent = msg; };
 const updateStatus = () => {
   const d = data, n = d.lanes.reduce((a, l) => a + l.commits.length, 0), f = (d.fresh || []).length, shown = L.lanes.length - 1, tot = d.lanes.length - 1;
-  const conf = d.lanes.filter(l => l.conflict && l.conflict.state === 'conflict').length;
-  $('status').textContent = `${shown === tot ? tot : shown + ' of ' + tot} branch${tot === 1 ? '' : 'es'} · ${n} commits` + (conf ? ` · ⚠ ${conf} conflicting` : '') + (d.lanes.filter(l => l.ci && l.ci.state === 'failure').length ? ` · ✗ ${d.lanes.filter(l => l.ci && l.ci.state === 'failure').length} failing CI` : '') + (d.skipped ? ` · ${d.skipped} older not loaded` : '') + (f ? ` · ${f} new` : '');
+  const conf = d.lanes.filter(l => l.conflict && l.conflict.state === 'conflict').length, bad = d.lanes.filter(l => l.ci && l.ci.state === 'failure').length;
+  $('status').textContent = `${shown === tot ? tot : shown + ' of ' + tot} branch${tot === 1 ? '' : 'es'} · ${n} commits` + (conf ? ` · ⚠ ${conf} conflicting` : '') + (bad ? ` · ✗ ${bad} failing CI` : '') + (d.skipped ? ` · ${d.skipped} older not loaded` : '') + (f ? ` · ${f} new` : '');
 };
+const showEmpty = msg => { clearBoard(); data = null; L = null; $('emptyMsg').innerHTML = msg; $('empty').style.display = 'grid'; };
 const openRepo = async reload => {
-  busy(true, reload ? 'reading git & checking conflicts…' : 'loading…');
+  if (!cur) { $('status').textContent = 'Add a repository to begin'; return showEmpty('Add a repository to see its branches.<br><small>Use the repository menu at the top left.</small>'); }
+  busy(true, reload ? (STATIC ? 'asking GitHub…' : 'reading git & checking conflicts…') : 'loading…');
   try {
-    const d = await api(`/api/graph?repo=${cur}&max=${flt.max}`, { method: reload ? 'POST' : 'GET' });
+    const d = await api(`api/graph?repo=${encodeURIComponent(cur)}&max=${flt.max}`, { method: reload ? 'POST' : 'GET' });
     data = d; data.github = (repos.find(r => r.id === cur) || {}).kind === 'github';
-    expanded = new Set(store.get(expKey(), [])); offs = store.get(offKey(), {}); deselect();
-    draw(); syncFilters(); updateStatus(); goNewest();
-    $('expAll').textContent = 'Expand all';
-  } catch (e) { $('status').textContent = 'error: ' + e.message; world.querySelectorAll('.card,.head,.pr,.more').forEach(n => n.remove()); edges.innerHTML = ''; $('emptyMsg').textContent = e.message; $('empty').style.display = 'grid'; }
+    expanded = new Set(store.get(expKey(), [])); offs = store.get(offKey(), {}); deselect(); closePops();
+    clearBoard(); draw(false); syncFilters(); updateStatus(); goNewest();
+    $('empty').style.display = 'none'; $('expAll').textContent = 'Expand all';
+  } catch (e) { $('status').textContent = 'error: ' + e.message; showEmpty(esc(e.message)); }
   busy(false);
 };
-const fillRepos = () => {
-  $('repo').innerHTML = repos.map(r => `<option value="${esc(r.id)}">${r.kind === 'github' ? '⌁ ' : ''}${esc(r.name)}</option>`).join('');
-  $('repo').value = cur; $('rmBtn').style.display = repos.length > 1 ? '' : 'none';
+
+// ----- repository menu -----
+const setPopMsg = () => { const m = $('popmsg'); m.className = 'note'; m.innerHTML = STATIC ? 'Reads the repo straight from GitHub in your browser. Nothing is uploaded anywhere else.' : 'Read through the GitHub API with your <code>gh</code> login, nothing is cloned. For a local folder, start typing a path (<code>/</code> or <code>~</code>).'; };
+const fillRepos = () => { $('repoName').textContent = (repos.find(r => r.id === cur) || {}).name || 'Add a repository'; };
+function renderRepoList() {
+  $('repoList').innerHTML = repos.length ? repos.map(r => `<div class="li${r.id === cur ? ' cur' : ''}" data-id="${esc(r.id)}"><span>${r.kind === 'github' ? '⌁' : '📁'}</span><span class="nm">${esc(r.name)}</span><i>${r.kind === 'github' ? 'GitHub' : 'local'}</i><button class="rm" data-rm="${esc(r.id)}" title="Remove from list" aria-label="Remove">✕</button></div>`).join('') : '<p class="note" style="margin:0">None yet. Add one above.</p>';
+}
+$('repoList').onclick = async e => {
+  const rm = e.target.closest('[data-rm]');
+  if (rm) {
+    e.stopPropagation();
+    try {
+      repos = (await api('api/repos/remove', { method: 'POST', body: JSON.stringify({ id: rm.dataset.rm }) })).repos;
+      if (!repos.some(r => r.id === cur)) { cur = repos[0] ? repos[0].id : null; store.set('gc-repo', cur); fillRepos(); renderRepoList(); openRepo(false); } else { fillRepos(); renderRepoList(); }
+    } catch (err) { $('popmsg').className = 'note err'; $('popmsg').textContent = err.message; }
+    return;
+  }
+  const li = e.target.closest('[data-id]'); if (li && li.dataset.id !== cur) { cur = li.dataset.id; store.set('gc-repo', cur); fillRepos(); closePops(); openRepo(false); }
 };
-$('repo').onchange = e => { cur = e.target.value; store.set('gc-repo', cur); openRepo(false); };
-$('reload').onclick = () => openRepo(true);
 const addRepo = async () => {
   const src = $('src').value.trim(), m = $('popmsg'); if (!src) return;
-  $('addGo').disabled = true; m.className = ''; m.textContent = 'Adding…';
+  $('addGo').disabled = true; m.className = 'note'; m.textContent = 'Adding…';
   try {
-    const r = await api('/api/repos', { method: 'POST', body: JSON.stringify({ source: src }) });
-    repos = r.repos; cur = r.added; store.set('gc-repo', cur); fillRepos();
-    $('pop').classList.remove('open'); $('src').value = ''; await openRepo(true);
-  } catch (e) { m.className = 'err'; m.textContent = e.message; }
+    const r = await api('api/repos', { method: 'POST', body: JSON.stringify({ source: src }) });
+    repos = r.repos; cur = r.added; store.set('gc-repo', cur); fillRepos(); renderRepoList(); closePops(); $('src').value = ''; setPopMsg();
+    await openRepo(true);
+  } catch (e) { m.className = 'note err'; m.textContent = e.message; }
   $('addGo').disabled = false;
 };
-$('addGo').onclick = addRepo;
-$('rmBtn').onclick = async () => {
-  try { repos = (await api('/api/repos/remove', { method: 'POST', body: JSON.stringify({ id: cur }) })).repos; cur = repos[0].id; store.set('gc-repo', cur); fillRepos(); openRepo(false); }
-  catch (e) { $('status').textContent = e.message; }
-};
+$('addGo').onclick = addRepo; $('reload').onclick = () => openRepo(true);
+$('tryBox').onclick = e => { const t = e.target.closest('[data-try]'); if (t) { $('src').value = t.dataset.try; addRepo(); } };
 let sugs = [], sel = -1, sugTimer = null;
 const showSugs = () => {
   const box = $('sug'); box.classList.toggle('open', sugs.length > 0); box.innerHTML = '';
   sugs.forEach((d, i) => { const r = document.createElement('div'); r.className = i === sel ? 'on' : ''; r.innerHTML = `<span>📁</span><span></span>${d.git ? '<i>git</i>' : ''}`; r.children[1].textContent = d.name + '/'; r.onmousedown = e => { e.preventDefault(); pick(i); }; box.appendChild(r); });
 };
 const fetchSugs = async () => {
-  const v = $('src').value; if (!/^[~\/.]/.test(v)) { sugs = []; return showSugs(); }
-  try { sugs = (await api('/api/ls?q=' + encodeURIComponent(v))).dirs; } catch { sugs = []; }
+  const v = $('src').value; if (STATIC || !/^[~\/.]/.test(v)) { sugs = []; return showSugs(); }
+  try { sugs = (await api('api/ls?q=' + encodeURIComponent(v))).dirs; } catch { sugs = []; }
   sel = -1; showSugs();
 };
 const pick = i => { $('src').value = sugs[i].path + '/'; $('src').focus(); fetchSugs(); };
@@ -613,11 +694,128 @@ $('src').onkeydown = e => {
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { if (sugs.length) { e.preventDefault(); sel = (sel + (e.key === 'ArrowDown' ? 1 : -1) + sugs.length) % sugs.length; showSugs(); } }
   else if (e.key === 'Tab' && sugs.length) { e.preventDefault(); pick(sel >= 0 ? sel : 0); }
   else if (e.key === 'Enter') { sel >= 0 ? pick(sel) : addRepo(); }
-  else if (e.key === 'Escape') { if (sugs.length) { sugs = []; showSugs(); } else $('pop').classList.remove('open'); }
+  else if (e.key === 'Escape') { if (sugs.length) { sugs = []; showSugs(); } else closePops(); }
 };
+
+// ======== browser-only GitHub client (used on GitHub Pages, where there is no local server) ========
+const TOKEN_KEY = 'gc-token', rate = { remaining: null, limit: null };
+const getToken = () => store.get(TOKEN_KEY, '') || '';
+const updateRate = () => { $('rateInfo').textContent = rate.remaining != null ? `GitHub API quota: ${rate.remaining} of ${rate.limit} requests left this hour` : ''; };
+const resetIn = r => { const t = +r.headers.get('x-ratelimit-reset'); return t ? Math.max(1, Math.ceil((t * 1000 - Date.now()) / 60000)) + ' min' : 'a while'; };
+async function ghReq(path, { gql } = {}) {
+  const tok = getToken(), headers = { Accept: 'application/vnd.github+json' };
+  if (tok) headers.Authorization = 'Bearer ' + tok;
+  let r;
+  try {
+    r = gql ? await fetch('https://api.github.com/graphql', { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(gql) })
+            : await fetch('https://api.github.com' + path, { headers });
+  } catch { throw new Error('Could not reach api.github.com. Check your connection.'); }
+  const rem = r.headers.get('x-ratelimit-remaining'); if (rem != null) { rate.remaining = +rem; rate.limit = +r.headers.get('x-ratelimit-limit'); updateRate(); }
+  if (r.status === 401) throw new Error('GitHub rejected the token (401). Remove it, or paste a new one.');
+  if (r.status === 403 || r.status === 429) throw new Error(rem === '0' ? `GitHub rate limit reached. Add a token for 5,000 requests/hour, or retry in ${resetIn(r)}.` : 'GitHub refused the request (403). ' + (tok ? 'Does the token have access to this repo (and is it authorised for SSO)?' : 'Private repos need a token.'));
+  if (r.status === 404) throw new Error(tok ? 'Repository not found, or your token cannot see it.' : 'Repository not found. If it is private, add a token.');
+  if (!r.ok) throw new Error('GitHub error ' + r.status);
+  return r.json();
+}
+async function ghGql(query, variables) { const j = await ghReq(null, { gql: { query, variables } }); if (j.errors && !j.data) throw new Error('GitHub: ' + j.errors[0].message); return j.data.repository; }
+async function pool(items, n, fn) { const out = new Array(items.length); let i = 0; await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) { const k = i++; out[k] = await fn(items[k], k); } })); return out; }
+const noRate = e => { if (/rate limit|401|token/i.test(e.message)) throw e; };
+const CI_Q = 'statusCheckRollup{state contexts(first:25){nodes{__typename ... on CheckRun{name conclusion status detailsUrl} ... on StatusContext{context state targetUrl}}}}';
+const GQL_LIST = `query($o:String!,$n:String!,$b:Int!,$base:String!){repository(owner:$o,name:$n){refs(refPrefix:"refs/heads/",first:$b,orderBy:{field:TAG_COMMIT_DATE,direction:DESC}){totalCount nodes{name target{oid ... on Commit{${CI_Q}}}}} base:ref(qualifiedName:$base){target{oid ... on Commit{${CI_Q}}}}}}`;
+const ciSt = (concl, status) => { const c = (concl || '').toUpperCase(); if ((status || 'COMPLETED').toUpperCase() !== 'COMPLETED' || !c) return 'pending'; return ['SUCCESS', 'NEUTRAL', 'SKIPPED'].includes(c) ? 'success' : 'failure'; };
+const ctxSt = st => { st = (st || '').toUpperCase(); return st === 'SUCCESS' ? 'success' : ['PENDING', 'EXPECTED', ''].includes(st) ? 'pending' : 'failure'; };
+function ciFromGraphql(roll) {
+  if (!roll) return null;
+  const checks = ((roll.contexts || {}).nodes || []).map(n => n.__typename === 'CheckRun' ? { name: n.name, state: ciSt(n.conclusion, n.status), url: n.detailsUrl } : { name: n.context, state: ctxSt(n.state), url: n.targetUrl });
+  const sts = new Set(checks.map(c => c.state));
+  const state = checks.length ? (sts.has('failure') ? 'failure' : sts.has('pending') ? 'pending' : 'success') : ({ SUCCESS: 'success', FAILURE: 'failure', ERROR: 'failure' }[roll.state] || 'pending');
+  return { state, checks: checks.slice(0, 25) };
+}
+const mapC = c => { const iso = (c.commit.committer && c.commit.committer.date) || c.commit.author.date; return { hash: c.sha, short: c.sha.slice(0, 7), msg: (c.commit.message || '').split('\n')[0], author: (c.commit.author && c.commit.author.name) || (c.author && c.author.login) || '?', date: iso.slice(0, 10), ct: Math.floor(Date.parse(iso) / 1000), parents: c.parents.map(p => p.sha), unpushed: false }; };
+const walk = (nodes, tip) => { const out = []; let h = tip; while (h && nodes[h] && out.length < 1000) { out.push(nodes[h]); h = nodes[h].parents[0]; } return out; };  // first-parent chain
+const encRef = s => s.split('/').map(encodeURIComponent).join('/');
+
+async function buildGraph(x, max) {
+  const o = x.owner, n = x.repo, R = `/repos/${o}/${n}`, info = await ghReq(R), base = info.default_branch, hasTok = !!getToken();
+  const prRaw = await ghReq(`${R}/pulls?state=all&sort=updated&direction=desc&per_page=100`).catch(e => { noRate(e); return []; }), prs = {};
+  for (const p of prRaw) if (!(p.head.repo && p.head.repo.full_name !== info.full_name) && !prs[p.head.ref])
+    prs[p.head.ref] = { number: p.number, state: p.merged_at ? 'MERGED' : p.state.toUpperCase(), title: p.title, url: p.html_url, draft: !!p.draft, mergeable: null, review: null, author: p.user && p.user.login, created: p.created_at, base: p.base.ref };
+  // which branches (most recently updated first) + CI. GraphQL needs a token; without one, PR branches first, then the rest.
+  let names, total, ciBy = {}, gq = null;
+  if (hasTok) { try { gq = await ghGql(GQL_LIST, { o, n, b: Math.min(100, max + 2), base }); } catch (e) { noRate(e); } }
+  if (gq) { names = gq.refs.nodes.map(r => r.name); total = gq.refs.totalCount; gq.refs.nodes.forEach(r => ciBy[r.name] = ciFromGraphql(r.target.statusCheckRollup)); ciBy[base] = ciFromGraphql(gq.base && gq.base.target.statusCheckRollup); }
+  else { const brs = await ghReq(`${R}/branches?per_page=100`), have = new Set(brs.map(b => b.name)); names = [...Object.keys(prs).filter(k => have.has(k)), ...brs.map(b => b.name).filter(k => !prs[k])]; total = brs.length; }
+  names = [...new Set(names)].filter(k => k !== base).slice(0, max);
+  const skipped = Math.max(0, total - 1 - max);
+  const hist = await ghReq(`${R}/commits?sha=${encodeURIComponent(base)}&per_page=100`), baseNodes = {};
+  hist.forEach(c => { const m = mapC(c); baseNodes[m.hash] = m; });
+  const bchain = hist.length ? walk(baseNodes, hist[0].sha) : [];
+  const cmps = await pool(names, 6, async name => {  // one call gives: commits since the fork, ahead/behind, fork point, changed files
+    try {
+      const url = `${R}/compare/${encRef(base)}...${encRef(name)}`; let c = await ghReq(url + '?per_page=100');
+      if (c.ahead_by > 100) c.commits = (await ghReq(url + `?per_page=100&page=${Math.ceil(c.ahead_by / 100)}`)).commits;  // newest page
+      return c;
+    } catch (e) { noRate(e); return null; }
+  });
+  const lanes = [{ name: base, is_base: true, mb: null, ahead: 0, behind: 0, more: hist.length >= 100 ? -1 : 0, upstream: 'GitHub', track: '', conflict: null, ci: ciBy[base] || null, pr: prs[base] || null, commits: bchain }];
+  names.forEach((name, i) => {
+    const c = cmps[i]; if (!c) return;
+    const nodes = {}; (c.commits || []).forEach(k => { const m = mapC(k); nodes[m.hash] = m; });
+    const cs = c.commits && c.commits.length ? walk(nodes, c.commits[c.commits.length - 1].sha) : [];
+    lanes.push({ name, is_base: false, mb: (c.merge_base_commit || {}).sha || null, ahead: c.ahead_by, behind: c.behind_by, more: Math.max(0, c.ahead_by - (c.commits || []).length), upstream: 'GitHub', track: '', conflict: null, ci: ciBy[name] || null, pr: prs[name] || null, commits: cs, _files: (c.files || []).map(f => f.filename) });
+  });
+  // conflicts: GitHub's own verdict for open PRs, otherwise files changed on BOTH sides of the fork
+  await pool(lanes.filter(l => !l.is_base && l.pr && l.pr.state === 'OPEN' && l.ahead).slice(0, 8), 6, async l => {
+    try { const p = await ghReq(`${R}/pulls/${l.pr.number}`); l.pr.mergeable = p.mergeable === true ? 'MERGEABLE' : p.mergeable === false ? 'CONFLICTING' : null; } catch (e) { noRate(e); }
+  });
+  await pool(lanes.filter(l => !l.is_base), 6, async l => {
+    const mine = l._files || []; delete l._files;
+    if (!l.ahead) return void (l.conflict = { state: 'merged', files: [], changed: [], source: 'files' });
+    if (l.pr && l.pr.state === 'OPEN' && l.pr.mergeable) return void (l.conflict = { state: l.pr.mergeable === 'MERGEABLE' ? 'clean' : 'conflict', files: [], changed: mine, source: 'pr' });
+    if (!l.behind) return void (l.conflict = { state: 'clean', files: [], changed: mine, source: 'files' });
+    if ((!hasTok && rate.remaining != null && rate.remaining < 25) || !l.mb) return void (l.conflict = { state: 'unknown', files: [], changed: mine, source: 'files' });
+    try {
+      const t = await ghReq(`${R}/compare/${l.mb}...${encRef(base)}?per_page=1`), theirs = new Set((t.files || []).map(f => f.filename)), both = mine.filter(f => theirs.has(f));
+      l.conflict = { state: both.length ? 'possible' : 'clean', files: both, changed: mine, source: 'files' };
+    } catch (e) { noRate(e); l.conflict = { state: 'unknown', files: [], changed: mine, source: 'files' }; }
+  });
+  const tags = {}; try { (await ghReq(`${R}/tags?per_page=100`)).forEach(t => (tags[t.commit.sha] ||= []).push(t.name)); } catch (e) { noRate(e); }
+  return { base, skipped, lanes, tags, ts: new Date().toISOString().slice(0, 19).replace('T', ' ') };
+}
+async function staticApi(path, opts = {}) {
+  const u = new URL(path, 'http://local/'), p = u.pathname, q = u.searchParams, post = opts.method === 'POST', body = opts.body ? JSON.parse(opts.body) : {}, list = () => store.get('gc-repos', []);
+  if (p === '/api/repos' && post) {
+    const src = String(body.source || '').trim(), m = /^(?:https?:\/\/)?(?:www\.)?(?:github\.com\/)?([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:\/.*)?$/.exec(src);
+    if (!m || /^[\/~.]/.test(src)) throw new Error('Type owner/repo or paste a github.com URL. Local folders need the local server (python3 gitdraw.py --serve).');
+    const info = await ghReq(`/repos/${m[1]}/${m[2]}`), x = { id: 'gh:' + info.full_name.toLowerCase(), kind: 'github', name: info.full_name, owner: info.owner.login, repo: info.name }, l = list();
+    if (!l.some(y => y.id === x.id)) l.push(x); store.set('gc-repos', l); return { repos: l, added: x.id };
+  }
+  if (p === '/api/repos/remove' && post) { const l = list().filter(y => y.id !== body.id); store.set('gc-repos', l); return { repos: l }; }
+  if (p === '/api/repos') return { repos: list() };
+  if (p === '/api/ls') return { dirs: [] };
+  if (p === '/api/graph') {
+    const x = list().find(y => y.id === q.get('repo')); if (!x) throw new Error('Add a repository first.');
+    const g = await buildGraph(x, Math.max(1, Math.min(100, +q.get('max') || 25)));
+    const cur2 = [...new Set(g.lanes.flatMap(l => l.commits.map(c => c.hash)))].sort(), key = 'gc-seen-' + x.id, prev = store.get(key, null);
+    g.fresh = prev ? cur2.filter(h => !prev.includes(h)) : []; if (post || !prev) store.set(key, cur2);
+    return { repo: x.name, id: x.id, ...g };
+  }
+  throw new Error('Not found');
+}
+// ----- token box (only shown in browser-only mode) -----
+function renderToken() { const has = !!getToken(); $('tokenBox').style.display = STATIC ? '' : 'none'; $('tok').placeholder = has ? 'Token saved. Paste a new one to replace it' : 'Paste a read-only token (optional)'; $('tokClear').style.display = has ? '' : 'none'; updateRate(); }
+$('tokSave').onclick = () => { const v = $('tok').value.trim(); if (!v) return; store.set(TOKEN_KEY, v); $('tok').value = ''; renderToken(); toast('Token saved'); if (cur) openRepo(true); };
+$('tokClear').onclick = () => { store.set(TOKEN_KEY, ''); renderToken(); toast('Token removed'); };
+
+// ----- start -----
 (async () => {
-  try { repos = (await api('/api/repos')).repos; if (!repos.some(r => r.id === cur)) cur = repos[0].id; fillRepos(); await openRepo(true); }
-  catch (e) { $('status').textContent = 'error: ' + e.message; }
+  try { const r = await fetch('api/repos', { headers: { 'X-Gitdraw': '1' } }); STATIC = !(r.ok && (r.headers.get('content-type') || '').includes('json')); } catch { STATIC = true; }
+  $('tryBox').style.display = STATIC ? '' : 'none'; $('src').placeholder = STATIC ? 'owner/repo or github.com URL' : 'owner/repo, URL, or local folder'; setPopMsg(); renderToken();
+  try {
+    repos = (await api('api/repos')).repos; if (!repos.some(r => r.id === cur)) cur = repos[0] ? repos[0].id : null;
+    fillRepos(); renderRepoList(); await openRepo(true);
+    if (!cur) setTimeout(() => $('repoBtn').click(), 150);
+  } catch (e) { $('status').textContent = 'error: ' + e.message; }
 })();
 </script>
 </body>

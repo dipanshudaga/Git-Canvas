@@ -11,7 +11,7 @@ orange outline = fork point (merge-base) of a branch, orange fill = merge commit
 (2nd-parent) edges. Every run then renders FILE's .png (needs Pillow) and checks it for overlapping
 boxes, text overflowing its box, arrows crossing unrelated boxes; exit code 2 if any problem found.
 Only the first-parent chain of each lane is drawn (merged-in side commits are collapsed).
-`--serve [--port 8765]` runs a local infinite-canvas viewer (viewer.html): one live canvas, branches are columns, each branch expands on its own; Reload re-reads git and marks commits that appeared since the last Reload as NEW. The repo dropdown / "+ Add repo" accepts owner/repo, a github.com URL or a local folder (GitHub repos are read through the GitHub API via `gh`, nothing is cloned; needs `gh auth login`). Commits collapse to the newest few per branch; each branch expands on its own via "Show N older commits" (--max-commits, --cap, --max-branches tune this).
+`--serve [--port 8765]` runs a local infinite-canvas viewer (index.html): one live canvas, branches are columns, each branch expands on its own; Reload re-reads git and marks commits that appeared since the last Reload as NEW. The repo dropdown / "+ Add repo" accepts owner/repo, a github.com URL or a local folder (GitHub repos are read through the GitHub API via `gh`, nothing is cloned; needs `gh auth login`). Commits collapse to the newest few per branch; each branch expands on its own via "Show N older commits" (--max-commits, --cap, --max-branches tune this).
 Run `python gitdraw.py --selftest` to build a throwaway repo and exercise everything.
 """
 import argparse, copy, datetime, hashlib, json, os, random, re, subprocess, sys, tempfile, time
@@ -209,7 +209,7 @@ def fetch_github(owner, name, cap=100, max_branches=8):
         t["history"] = hmap.get(t["oid"], empty)
     def cmp_(b):
         try:
-            c = gh("api", f"repos/{owner}/{name}/compare/{quote(base, safe='')}...{quote(b['name'], safe='')}?per_page=1")
+            c = gh("api", f"repos/{owner}/{name}/compare/{quote(base, safe='/')}...{quote(b['name'], safe='/')}?per_page=1")
             b["rest"] = dict(ahead=c["ahead_by"], behind=c["behind_by"], files=[f["filename"] for f in c.get("files", [])], mb=(c.get("merge_base_commit") or {}).get("sha"))
         except (ValueError, KeyError):
             b["rest"] = None
@@ -571,7 +571,7 @@ def main(argv=None):
     ap.add_argument("--max-branches", type=int, default=25, help="most recently updated branches to draw (default 8)")
     ap.add_argument("--full", action="store_true", help="one-off output: show all commits instead of collapsing")
     ap.add_argument("--selftest", action="store_true")
-    ap.add_argument("--serve", action="store_true", help="serve the interactive infinite-canvas viewer (viewer.html)")
+    ap.add_argument("--serve", action="store_true", help="serve the interactive infinite-canvas viewer (index.html)")
     ap.add_argument("--port", type=int, default=8765)
     a = ap.parse_args(argv)
     if a.selftest:
@@ -740,7 +740,7 @@ def list_dirs(q):
     return out[:40]
 
 def serve(a, repo):
-    """local server for viewer.html: several repos (local folders or GitHub via API), per-repo snapshot history."""
+    """local server for index.html: several repos (local folders or GitHub via API), per-repo snapshot history."""
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
     from urllib.parse import urlparse, parse_qs
     here = os.path.dirname(os.path.abspath(__file__))
@@ -823,7 +823,10 @@ def serve(a, repo):
                 if u.path == "/api/graph":
                     a2 = copy.copy(a); a2.max_branches = max(1, min(100, int(q.get("max", [a.max_branches])[0])))
                     return self.reply(dict(repo=x["name"], id=x["id"], **load(x, post, a2)))
-                return self.reply(open(os.path.join(here, "viewer.html"), "rb").read(), "text/html; charset=utf-8")
+                assets = {"/favicon.svg": "image/svg+xml", "/favicon.png": "image/png", "/apple-touch-icon.png": "image/png"}
+                if u.path in assets:
+                    return self.reply(open(os.path.join(here, u.path[1:]), "rb").read(), assets[u.path])
+                return self.reply(open(os.path.join(here, "index.html"), "rb").read(), "text/html; charset=utf-8")
             except (ValueError, OSError, subprocess.SubprocessError, SystemExit) as e:
                 self.reply({"error": str(e)}, code=400)
         def do_GET(self):
