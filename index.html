@@ -62,6 +62,7 @@
   #tl .logo { display:flex; align-items:center; gap:var(--s2); font:var(--t-title); font-weight:700; white-space:nowrap }
   .rb { height:var(--c); padding:0 var(--s3); border-radius:var(--r2); background:var(--fill); font:var(--t-label); max-width:280px; display:inline-flex; align-items:center; gap:var(--s2) } .rb:hover,.rb.on { background:var(--fill-2) }
   .rb #repoName { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+  #status:empty { display:none }
   #status { position:fixed; top:calc(var(--edge) + var(--bar) + var(--s2)); left:var(--edge); z-index:4; font:var(--t-body); color:var(--muted); background:rgba(255,255,255,.9); backdrop-filter:blur(6px); padding:var(--s1) var(--s3); border-radius:var(--pill); box-shadow:0 0 0 1px var(--line); white-space:nowrap; max-width:min(640px, calc(100vw - 2 * var(--edge))); overflow:hidden; text-overflow:ellipsis }
   #dock { bottom:var(--edge); left:50%; transform:translateX(-50%); width:max-content; max-width:calc(100vw - 2 * var(--edge)); height:var(--bar); display:flex; align-items:center; gap:var(--s1); padding:0 var(--s2) }
   body.side #dock { left:calc((100vw - 416px) / 2) }
@@ -187,7 +188,7 @@
   <span class="logo"><svg viewBox="0 0 480 600" width="16" height="20" aria-hidden="true"><path d="M0 0H480V80H80V520H400V340H280V420H200V180H280V260H480V600H0Z" fill="#4c1d95"/></svg>Git Canvas</span>
   <button class="rb" id="repoBtn" data-pop="pop" aria-haspopup="true"><span id="repoName">…</span><svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
 </div>
-<div id="status" role="status">loading…</div>
+<div id="status" role="status"></div>
 
 <div id="dock" class="float">
   <button class="tb" id="filtBtn" data-pop="filt"><svg class="i" aria-hidden="true"><use href="#i-filter"/></svg>Filters<span class="badge" id="filtN" style="display:none"></span></button>
@@ -199,7 +200,6 @@
 <div id="pop" class="float pop caret">
   <div class="in"><input type="text" id="src" placeholder="owner/repo or github.com URL" spellcheck="false" autocomplete="off"><button class="tb primary" id="addGo">Add</button></div>
   <div id="sug"></div>
-  <div id="tryBox" class="note" style="display:none">Try <span class="try" data-try="tauri-apps/tauri">tauri-apps/tauri</span><span class="try" data-try="facebook/react">facebook/react</span><span class="try" data-try="vercel/next.js">vercel/next.js</span></div>
   <h4 class="ph">Repositories</h4>
   <div id="repoList"></div>
   <p id="popmsg" class="note"></p>
@@ -704,7 +704,6 @@ const openRepo = async reload => {
 const setPopMsg = () => { const m = $('popmsg'); m.className = 'note'; m.textContent = ''; };
 const fillRepos = () => { $('repoName').textContent = (repos.find(r => r.id === cur) || {}).name || 'Add a repository'; };
 function renderRepoList() {
-  $('tryBox').style.display = STATIC && !repos.length ? '' : 'none';  // example links are only for the very first visit
   $('repoList').innerHTML = repos.length ? repos.map(r => `<div class="li${r.id === cur ? ' cur' : ''}" data-id="${esc(r.id)}">${ico(r.kind === 'github' ? 'github' : 'folder')}<span class="nm">${esc(r.name)}</span><span class="kind">${r.kind === 'github' ? 'GitHub' : 'Local'}</span><button class="rm" data-rm="${esc(r.id)}" title="Remove from list" aria-label="Remove">${ico('x')}</button></div>`).join('') : '<p class="note" style="margin:0">None yet. Add one above.</p>';
 }
 $('repoList').onclick = async e => {
@@ -737,7 +736,6 @@ window.addEventListener('paste', e => {
   if (/^(https?:\/\/)?(www\.)?github\.com\/[\w.-]+\/[\w.-]+/i.test(t) || /^[\w.-]+\/[\w.-]+$/.test(t)) { e.preventDefault(); addSource(t, null, null); }
 });
 $('addGo').onclick = addRepo; $('reload').onclick = () => openRepo(true);
-$('tryBox').onclick = e => { const t = e.target.closest('[data-try]'); if (t) { $('src').value = t.dataset.try; addRepo(); } };
 let sugs = [], sel = -1, sugTimer = null;
 const showSugs = () => {
   const box = $('sug'); box.classList.toggle('open', sugs.length > 0); box.innerHTML = '';
