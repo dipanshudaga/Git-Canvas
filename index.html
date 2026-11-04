@@ -4,13 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Git Canvas</title>
-<meta name="description" content="Git Canvas shows a GitHub repository as a map. Each branch is a column. Each commit is a card. See merges, conflicts, pull requests, and CI. Paste a link. No sign-in for public repositories.">
-<link rel="canonical" href="https://dipanshudaga.github.io/Git-Canvas/">
-<meta property="og:type" content="website"><meta property="og:site_name" content="Git Canvas">
-<meta property="og:title" content="Git Canvas: see any GitHub repository as a map">
-<meta property="og:description" content="Each branch is a column. Each commit is a card. See merges, conflicts, pull requests, and CI. Paste a link. No sign-in for public repositories.">
-<meta property="og:url" content="https://dipanshudaga.github.io/Git-Canvas/"><meta property="og:image" content="https://dipanshudaga.github.io/Git-Canvas/assets/preview.png">
-<meta name="twitter:card" content="summary_large_image">
+<meta name="description" content="Git Canvas shows a GitHub repository as a map. Each branch is a column. Each commit is a card. See merges, conflicts, pull requests, and CI. Paste a link to start.">
 <meta name="theme-color" content="#4c1d95">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="favicon.png" type="image/png">
@@ -101,7 +95,7 @@
   .card { position:absolute; width:256px; height:128px; border-radius:var(--r2); padding:var(--s3); border:2px solid; cursor:grab; user-select:none; box-shadow:var(--e1); transition:box-shadow .12s }
   .card:hover { box-shadow:var(--e3) }
   .card.sel,.pr.sel,.head.sel { box-shadow:0 0 0 4px rgba(79,70,229,.5), var(--e3) }
-  .card.unpushed { border-style:dashed } .card.merge { border-width:3px }
+  .card.merge { border-width:3px }
   .card .r1 { display:flex; justify-content:space-between; align-items:center; height:16px; font:var(--t-caption); color:var(--ink-2) }
   .card .r1 > span:last-child { display:inline-flex; align-items:center; gap:var(--s2) }
   .card .h { font:var(--t-code-strong) }
@@ -202,15 +196,9 @@
 
 <div id="pop" class="float pop caret">
   <div class="in"><input type="text" id="src" placeholder="owner/repo or github.com URL" spellcheck="false" autocomplete="off"><button class="tb primary" id="addGo">Add</button></div>
-  <div id="sug"></div>
   <h4 class="ph" id="repoHead">Repositories</h4>
   <div id="repoList"></div>
   <div id="popmsg"></div>
-  <details id="tokenBox" style="display:none">
-    <summary class="ph" style="cursor:pointer">Advanced</summary>
-    <div class="in"><input type="password" id="tok" autocomplete="off" spellcheck="false"><button class="tb primary" id="tokSave">Save</button></div>
-    <p class="note">A read-only token opens private repos and raises GitHub's free limit. <a class="link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create one <svg class="i xs" aria-hidden="true"><use href="#i-external"/></svg></a> <button class="try" id="tokClear" style="display:none">Remove saved token</button></p>
-  </details>
 </div>
 
 <div id="filt" class="float pop caret">
@@ -242,12 +230,9 @@
 <script>
 const $ = id => document.getElementById(id), vp = $('viewport'), world = $('world'), edges = $('edges');
 const store = { get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
-let STATIC = false;  // true when there is no local server (GitHub Pages / file): talk to api.github.com straight from the browser
-const api = async (path, opts = {}) => {
-  if (STATIC) return staticApi(path, opts);
-  const r = await fetch(path.replace(/^\//, ''), { ...opts, headers: { 'X-Gitdraw': '1', 'Content-Type': 'application/json' } });
-  const j = await r.json(); if (j.error) throw new Error(j.error); return j;
-};
+const api = (path, opts = {}) => staticApi(path, opts);  // everything goes to GitHub through the local server
+let AUTH = { authed: false };  // does the local server hold a GitHub sign-in (from `gh` or GITHUB_TOKEN)?
+const authed = () => AUTH.authed;
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const ico = (n, c = '') => `<svg class="i${c ? ' ' + c : ''}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 const setExp = all => { $('expAll').innerHTML = ico(all ? 'fold' : 'unfold') + (all ? 'Collapse all' : 'Expand all'); };
@@ -404,9 +389,9 @@ function draw(animate = true, anchorKey = null, mutate = null) {
     }
   }
   for (const it of Object.values(L.items)) if (it.kind === 'card') {
-    const c = it.c, ln = it.ln, merge = c.parents.length > 1, fork = ln.is_base && L.forkOf[c.hash], unp = c.unpushed && ln.upstream;
+    const c = it.c, ln = it.ln, merge = c.parents.length > 1, fork = ln.is_base && L.forkOf[c.hash];
     const tag = merge ? `<span class="tag" style="color:${ln.color}">MERGE</span>` : fork ? `<span class="tag" style="color:#475569" title="${esc(fork.join(', '))} last shared history with this line here">SPLIT</span>` : '';
-    const d = mk(it, `card${unp ? ' unpushed' : ''}${merge ? ' merge' : ''}${fresh.has(c.hash) ? ' fresh' : ''}`,
+    const d = mk(it, `card${merge ? ' merge' : ''}${fresh.has(c.hash) ? ' fresh' : ''}`,
       `${tagsHtml(c.hash)}<div class="r1"><span class="h" style="color:${ln.color}">${esc(c.short)}</span><span>${it === ln.tip ? ciDot(ln.ci) : ''}${esc(fmtDate(c.date))}</span></div><div class="m">${esc(c.msg)}</div>
        <div class="a"><span class="av" style="background:${avColor(c.author)}">${esc(initials(c.author))}</span><b>${esc(c.author)}</b>${tag}</div>`);
     const t = tint(ln.color, merge ? .28 : .14);
@@ -507,7 +492,7 @@ function conflictCallout(ln, list = true) {
   if (cf.state === 'conflict') return `<div class="callout bad"><b class="t">${ico('alert')}Merge conflict${n ? ` in ${n} file${n > 1 ? 's' : ''}` : ''}</b>Both <b>${esc(ln.name)}</b> and <b>${esc(base)}</b> changed the same lines${cf.source === 'pr' ? ' (GitHub says this PR can\'t be merged as-is)' : ''}. Git can't pick a winner, so a human must choose, usually the branch's author.</div>${n && list ? `<h4>Conflicting files</h4>${fileList(cf.files, cf.files)}` : ''}`;
   if (cf.state === 'possible') return `<div class="callout warn"><b class="t">${ico('alert')}May conflict</b>${n} file${n > 1 ? 's were' : ' was'} changed on <b>both</b> sides. They only clash if the exact same lines changed, and that can't be checked without cloning.</div>${list ? `<h4>Files changed on both sides</h4>${fileList(cf.files, cf.files)}` : ''}`;
   if (cf.state === 'clean') return `<div class="callout ok"><b class="t">${ico('check')}Merges cleanly</b>${ln.behind ? `<b>${esc(base)}</b> moved on, but in different places from this branch.` : `<b>${esc(base)}</b> hasn't changed since this branch split off.`}</div>`;
-  return `<div class="callout info"><b class="t">Conflict check unavailable</b>Needs Git 2.38+ locally, or more GitHub API quota (add a token).</div>`;
+  return `<div class="callout info"><b class="t">Conflict check unavailable</b>Not enough GitHub requests are left to check it. Run gh auth login in your terminal to raise the limit.</div>`;
 }
 function inspect(key) {
   const it = L && L.items[key], s = $('side'); if (!it) return;
@@ -520,7 +505,6 @@ function inspect(key) {
     let why = merge ? `<div class="callout info"><b class="t">This is a merge commit</b>It joins two lines of work (${parents}) into <b>${esc(ln.name)}</b>. If both sides had changed the same lines, Git would have stopped and asked a human to resolve a <b>conflict</b>.</div>`
       : `<div class="callout info"><b class="t">A saved snapshot</b>${c.parents.length ? `Built on top of ${parents}. Following these links backwards walks the project's history.` : 'This is the very first commit. Everything else was built on it.'}</div>`;
     if (fork) why += `<div class="callout info"><b class="t">Split point</b>${fork.map(esc).join(', ')} and <b>${esc(ln.name)}</b> last shared history here. Anything added to <b>${esc(ln.name)}</b> after this is invisible to that branch until it merges or rebases.</div>`;
-    if (c.unpushed && ln.upstream) why += `<div class="callout warn"><b class="t">Not pushed yet</b>This commit exists only on your computer. Teammates can't see it.</div>`;
     const tg = (data.tags || {})[c.hash];
     if (tg) why += `<div class="callout info"><b class="t">${ico('tag')}${tg.map(esc).join(', ')}</b>A tag is a permanent name for one exact commit, usually a release. Unlike a branch, it never moves.</div>`;
     band = band_(ln.color, 'Commit', c.msg);
@@ -550,7 +534,7 @@ function inspect(key) {
     const filesHtml = cf && cf.changed.length ? `<h4>Files changed on this branch (${cf.changed.length})</h4><div class="cmdnote" style="margin:0 0 8px">${cf.files.length ? '<b style="color:var(--bad)">Red</b> clashes with ' + esc(data.base) + '. ' : ''}</div>${fileList(cf.changed, cf.files)}` : '';
     const cmds = ln.is_base ? '' : `<h4>Try it</h4>${ln.ahead ? cmd(`git checkout ${base} && git merge ${ln.name}`) + '<div class="cmdnote">Merge this branch into ' + esc(base) + '.</div>' : ''}${ln.behind ? cmd(`git checkout ${ln.name} && git merge ${base}`) + '<div class="cmdnote">Bring this branch up to date. This is where you\'d resolve conflicts.</div>' : ''}${cmd(`git log ${base}..${ln.name} --oneline`)}<div class="cmdnote">List the commits only this branch has.</div>`;
     body = `${ln.is_base ? '' : `<div class="stats"><div class="stat"><b style="color:${ln.color}">${ln.ahead}</b><span>commits ahead</span></div><div class="stat"><b>${ln.behind}</b><span>commits behind</span></div></div>${tot ? `<div class="bar"><i style="width:${ln.ahead / tot * 100}%;background:${ln.color}"></i><i style="flex:1;background:${BASE_COLOR};opacity:.45"></i></div>` : ''}`}
-      <dl class="kv">${forkRow}${kvRow('Remote', ln.upstream ? esc(ln.upstream) + (ln.track ? ` <i style="color:var(--muted)">(${esc(ln.track)})</i>` : '') : '<span style="color:var(--muted)">none (local only)</span>')}${ln.commits.length ? kvRow('Updated', ago(ln.commits[0].ct)) : ''}${ln.pr ? kvRow('PR', `<a class="link" data-key="pr:${esc(ln.name)}">#${ln.pr.number}</a> <span class="pill" style="background:${(PRS[prState(ln.pr)] || PRS.OPEN)[1]};color:${(PRS[prState(ln.pr)] || PRS.OPEN)[0]}">${(PRS[prState(ln.pr)] || PRS.OPEN)[2]}</span>`) : ''}</dl>
+      <dl class="kv">${forkRow}${''}${ln.commits.length ? kvRow('Updated', ago(ln.commits[0].ct)) : ''}${ln.pr ? kvRow('PR', `<a class="link" data-key="pr:${esc(ln.name)}">#${ln.pr.number}</a> <span class="pill" style="background:${(PRS[prState(ln.pr)] || PRS.OPEN)[1]};color:${(PRS[prState(ln.pr)] || PRS.OPEN)[0]}">${(PRS[prState(ln.pr)] || PRS.OPEN)[2]}</span>`) : ''}</dl>
       ${why}${stale}${conflictCallout(ln, false)}${checksSection(ln.ci)}${filesHtml}${cmds}`;
   }
   s.innerHTML = band + `<div class="body">${body}</div>`; s.classList.add('open'); document.body.classList.add('side'); s.scrollTop = 0;
@@ -585,7 +569,7 @@ const syncFilters = () => {
   $('fMerged').classList.toggle('on', flt.merged); $('fConf').classList.toggle('on', flt.conf);
   const n = (flt.stale ? 1 : 0) + (flt.merged ? 1 : 0) + (flt.conf ? 1 : 0) + (flt.max !== 25 ? 1 : 0);
   $('filtN').style.display = n ? '' : 'none'; $('filtN').textContent = n;
-  if (data) { const total = data.lanes.length - 1, shown = L ? L.lanes.length - 1 : total; $('fSummary').textContent = `Showing ${shown} of ${total} loaded branches` + (data.skipped ? ` (${data.skipped} older ones not loaded, so raise "Load up to")` : '') + (STATIC && !getToken() && flt.max > 12 ? ' Without a token, up to 12 branches are loaded to stay inside the free GitHub limit.' : ''); }
+  if (data) { const total = data.lanes.length - 1, shown = L ? L.lanes.length - 1 : total; $('fSummary').textContent = `Showing ${shown} of ${total} loaded branches` + (data.skipped ? ` (${data.skipped} older ones not loaded, so raise "Load up to")` : '') + (!authed() && flt.max > 12 ? ' Without a GitHub sign-in, up to 12 branches are loaded. Run gh auth login in your terminal for more.' : ''); }
 };
 const applyFilters = () => { store.set('gc-filters', flt); if (data) { draw(); syncFilters(); updateStatus(); } };
 seg('fMax', [[10, '10'], [25, '25'], [50, '50'], [100, '100']], 'max', () => { syncFilters(); openRepo(false); });
@@ -681,9 +665,9 @@ const busy = (on, msg) => { $('reload').disabled = on; if (msg) $('status').text
 const updateStatus = () => {
   const d = data, n = d.lanes.reduce((a, l) => a + l.commits.length, 0), f = (d.fresh || []).length, shown = L.lanes.length - 1, tot = d.lanes.length - 1;
   const conf = d.lanes.filter(l => l.conflict && l.conflict.state === 'conflict').length, bad = d.lanes.filter(l => l.ci && l.ci.state === 'failure').length;
-  $('status').textContent = `${shown === tot ? tot : shown + ' of ' + tot} branch${tot === 1 ? '' : 'es'} · ${n} commits` + (conf ? ` · ${conf} conflicting` : '') + (bad ? ` · ${bad} failing CI` : '') + (d.skipped ? ` · ${d.skipped} older not loaded` : '') + (STATIC && rate.remaining != null && rate.remaining < 15 ? ` · ${rate.remaining} free GitHub requests left` : '') + (f ? ` · ${f} new` : '');
+  $('status').textContent = `${shown === tot ? tot : shown + ' of ' + tot} branch${tot === 1 ? '' : 'es'} · ${n} commits` + (conf ? ` · ${conf} conflicting` : '') + (bad ? ` · ${bad} failing CI` : '') + (d.skipped ? ` · ${d.skipped} older not loaded` : '') + (!authed() && rate.remaining != null && rate.remaining < 15 ? ` · ${rate.remaining} free GitHub requests left` : '') + (f ? ` · ${f} new` : '');
 };
-const effMax = () => STATIC && !getToken() ? Math.min(flt.max, 12) : flt.max;  // without a token, stay well inside GitHub's free 60 requests/hour
+const effMax = () => authed() ? flt.max : Math.min(flt.max, 12);  // without a sign-in, stay well inside GitHub's free 60 requests/hour
 const showStart = () => {  // no repository yet: the canvas itself is the home page, with the repository menu open
   clearBoard(); data = null; L = null; document.body.classList.add('empty'); $('emptyMsg').textContent = 'Paste a link to a GitHub repository'; $('empty').style.display = 'grid';
   setTimeout(() => { if (!$('pop').classList.contains('open')) togglePop($('pop'), $('repoBtn'), false); renderRepoList(); $('src').focus(); }, 60);
@@ -691,14 +675,14 @@ const showStart = () => {  // no repository yet: the canvas itself is the home p
 const showEmpty = msg => { clearBoard(); data = null; L = null; $('emptyMsg').innerHTML = msg; $('empty').style.display = 'grid'; };
 const openRepo = async reload => {
   if (!cur) return showStart();
-  busy(true, reload ? (STATIC ? 'asking GitHub…' : 'reading git & checking conflicts…') : 'loading…');
+  busy(true, reload ? 'asking GitHub…' : 'loading…');
   try {
     const d = await api(`api/graph?repo=${encodeURIComponent(cur)}&max=${effMax()}`, { method: reload ? 'POST' : 'GET' });
     data = d; data.github = (repos.find(r => r.id === cur) || {}).kind === 'github';
     expanded = new Set(store.get(expKey(), [])); offs = store.get(offKey(), {}); laneOrder = store.get(ordKey(), []); for (const k of Object.keys(offs)) if (k.startsWith('L:')) delete offs[k]; deselect(); closePops();  // (columns are reordered now, so old free-float offsets are dropped)
     clearBoard(); draw(false); syncFilters(); updateStatus(); goNewest();
     $('empty').style.display = 'none'; document.body.classList.remove('empty'); setExp(false);
-    if (STATIC) { const nm = (repos.find(r => r.id === cur) || {}).name; if (nm) try { history.replaceState(null, '', '?repo=' + nm); } catch {} }  // the address bar is now a shareable link
+    { const nm = (repos.find(r => r.id === cur) || {}).name; if (nm) try { history.replaceState(null, '', '?repo=' + nm); } catch {} }  // the address bar names the repo
   } catch (e) { $('status').textContent = 'error: ' + e.message; showEmpty(esc(e.message)); }
   busy(false);
 };
@@ -706,14 +690,12 @@ const openRepo = async reload => {
 // ----- repository menu -----
 const setPopMsg = () => { $('popmsg').innerHTML = ''; };
 function showErr(el, e) {
-  const rate = e.rate, tok = !!getToken();
-  el.innerHTML = `<div class="alert" role="alert">${ico('alert')}<div>${rate ? `<b>GitHub's free limit is used up</b>Try again in ${esc(e.wait)}${tok ? '.' : ', or add a token to keep going.'}` : esc(e.message)}${rate && !tok ? '<br><button class="act" id="addTok">Add a token</button>' : ''}</div></div>`;
-  const b = $('addTok'); if (b) b.onclick = () => { $('tokenBox').open = true; $('tok').focus(); };
+  el.innerHTML = `<div class="alert" role="alert">${ico('alert')}<div>${e.rate ? `<b>GitHub's free limit is used up</b>Try again in ${esc(e.wait)}.${authed() ? '' : ' Run <code>gh auth login</code> in your terminal, then restart Git Canvas, to raise the limit.'}` : esc(e.message)}</div></div>`;
 }
 const fillRepos = () => { $('repoName').textContent = (repos.find(r => r.id === cur) || {}).name || 'Add a repository'; };
 function renderRepoList() {
   $('repoHead').style.display = repos.length ? '' : 'none';
-  $('repoList').innerHTML = repos.length ? repos.map(r => `<div class="li${r.id === cur ? ' cur' : ''}" data-id="${esc(r.id)}">${ico(r.kind === 'github' ? 'github' : 'folder')}<span class="nm">${esc(r.name)}</span><span class="kind">${r.kind === 'github' ? 'GitHub' : 'Local'}</span><button class="rm" data-rm="${esc(r.id)}" title="Remove from list" aria-label="Remove">${ico('x')}</button></div>`).join('') : '';
+  $('repoList').innerHTML = repos.length ? repos.map(r => `<div class="li${r.id === cur ? ' cur' : ''}" data-id="${esc(r.id)}">${ico('github')}<span class="nm">${esc(r.name)}</span><button class="rm" data-rm="${esc(r.id)}" title="Remove from list" aria-label="Remove">${ico('x')}</button></div>`).join('') : '';
 }
 $('repoList').onclick = async e => {
   const rm = e.target.closest('[data-rm]');
@@ -745,42 +727,26 @@ window.addEventListener('paste', e => {
   if (/^(https?:\/\/)?(www\.)?github\.com\/[\w.-]+\/[\w.-]+/i.test(t) || /^[\w.-]+\/[\w.-]+$/.test(t)) { e.preventDefault(); addSource(t, null, null); }
 });
 $('addGo').onclick = addRepo; $('reload').onclick = () => openRepo(true);
-let sugs = [], sel = -1, sugTimer = null;
-const showSugs = () => {
-  const box = $('sug'); box.classList.toggle('open', sugs.length > 0); box.innerHTML = '';
-  sugs.forEach((d, i) => { const r = document.createElement('div'); r.className = i === sel ? 'on' : ''; r.innerHTML = `${ico('folder')}<span></span>${d.git ? '<i>git</i>' : ''}`; r.children[1].textContent = d.name + '/'; r.onmousedown = e => { e.preventDefault(); pick(i); }; box.appendChild(r); });
-};
-const fetchSugs = async () => {
-  const v = $('src').value; if (STATIC || !/^[~\/.]/.test(v)) { sugs = []; return showSugs(); }
-  try { sugs = (await api('api/ls?q=' + encodeURIComponent(v))).dirs; } catch { sugs = []; }
-  sel = -1; showSugs();
-};
-const pick = i => { $('src').value = sugs[i].path + '/'; $('src').focus(); fetchSugs(); };
-$('src').oninput = () => { clearTimeout(sugTimer); sugTimer = setTimeout(fetchSugs, 100); };
 $('src').onkeydown = e => {
-  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { if (sugs.length) { e.preventDefault(); sel = (sel + (e.key === 'ArrowDown' ? 1 : -1) + sugs.length) % sugs.length; showSugs(); } }
-  else if (e.key === 'Tab' && sugs.length) { e.preventDefault(); pick(sel >= 0 ? sel : 0); }
-  else if (e.key === 'Enter') { sel >= 0 ? pick(sel) : addRepo(); }
-  else if (e.key === 'Escape') { if (sugs.length) { sugs = []; showSugs(); } else closePops(); }
+  if (e.key === 'Enter') addRepo();
+  else if (e.key === 'Escape') closePops();
 };
 
-// ======== browser-only GitHub client (used on GitHub Pages, where there is no local server) ========
-const TOKEN_KEY = 'gc-token', rate = { remaining: null, limit: null };
-const getToken = () => store.get(TOKEN_KEY, '') || '';
+// ======== GitHub client: the browser asks the local server, which adds your GitHub sign-in ========
+const rate = { remaining: null, limit: null };
 const updateRate = () => {};  // the free-quota warning shows in the status line when it is low
 const resetIn = r => { const t = +r.headers.get('x-ratelimit-reset'); return t ? Math.max(1, Math.ceil((t * 1000 - Date.now()) / 60000)) + ' min' : 'a while'; };
 async function ghReq(path, { gql } = {}) {
-  const tok = getToken(), headers = { Accept: 'application/vnd.github+json' };
-  if (tok) headers.Authorization = 'Bearer ' + tok;
+  const tok = authed(), headers = { Accept: 'application/vnd.github+json' };
   let r;
   try {
-    r = gql ? await fetch('https://api.github.com/graphql', { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(gql) })
-            : await fetch('https://api.github.com' + path, { headers });
-  } catch { throw new Error('Could not reach api.github.com. Check your connection.'); }
+    r = gql ? await fetch('gh/graphql', { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(gql) })
+            : await fetch('gh' + path, { headers });
+  } catch { throw new Error('Could not reach GitHub. Check your connection, and that Git Canvas is still running in your terminal.'); }
   const rem = r.headers.get('x-ratelimit-remaining'); if (rem != null) { rate.remaining = +rem; rate.limit = +r.headers.get('x-ratelimit-limit'); updateRate(); }
-  if (r.status === 401) throw new Error('GitHub rejected the token (401). Remove it, or paste a new one.');
-  if (r.status === 403 || r.status === 429) throw rem === '0' ? Object.assign(new Error('GitHub free limit used up'), { rate: true, wait: resetIn(r) }) : new Error('GitHub refused the request (403). ' + (tok ? 'Does the token have access to this repo (and is it authorised for SSO)?' : 'Most likely GitHub\'s free limit (60 requests per hour from your network) is used up, so try again in a while. It can also mean the repo is private.'));
-  if (r.status === 404) throw new Error(tok ? 'Repository not found, or your token cannot see it.' : "Couldn't find that repository. Git Canvas opens public repositories without signing in. Private repo? Add a token under Advanced in the repository menu.");
+  if (r.status === 401) throw new Error('GitHub rejected your sign-in (401). Run gh auth login in your terminal, then restart Git Canvas.');
+  if (r.status === 403 || r.status === 429) throw rem === '0' ? Object.assign(new Error('GitHub free limit used up'), { rate: true, wait: resetIn(r) }) : new Error('GitHub refused the request (403). ' + (tok ? 'Does your GitHub account have access to this repo (and is it authorised for SSO)?' : 'Most likely GitHub\'s free limit (60 requests per hour from your network) is used up, so try again in a while. It can also mean the repo is private.'));
+  if (r.status === 404) throw new Error(tok ? 'Repository not found, or your GitHub account cannot see it.' : "Couldn't find that repository. Private repo? Run gh auth login in your terminal, then restart Git Canvas.");
   if (!r.ok) throw new Error('GitHub error ' + r.status);
   return r.json();
 }
@@ -810,7 +776,7 @@ const encRef = s => s.split('/').map(encodeURIComponent).join('/');
 const infoMemo = {};
 async function repoInfo(R) { const m = infoMemo[R]; if (m && Date.now() - m.t < 60000) return m.v; const v = await ghReq(R); infoMemo[R] = { t: Date.now(), v }; return v; }
 async function buildGraph(x, max) {
-  const o = x.owner, n = x.repo, R = `/repos/${o}/${n}`, info = await repoInfo(R), base = info.default_branch, hasTok = !!getToken();
+  const o = x.owner, n = x.repo, R = `/repos/${o}/${n}`, info = await repoInfo(R), base = info.default_branch, hasTok = authed();
   const prRaw = await ghReq(`${R}/pulls?state=all&sort=updated&direction=desc&per_page=100`).catch(e => { noRate(e); return []; }), prs = {};
   for (const p of prRaw) if (!(p.head.repo && p.head.repo.full_name !== info.full_name) && !prs[p.head.ref])
     prs[p.head.ref] = { number: p.number, state: p.merged_at ? 'MERGED' : p.state.toUpperCase(), title: p.title, url: p.html_url, draft: !!p.draft, mergeable: null, review: null, author: p.user && p.user.login, created: p.created_at, base: p.base.ref };
@@ -870,16 +836,15 @@ async function staticApi(path, opts = {}) {
   const u = new URL(path, 'http://local/'), p = u.pathname, q = u.searchParams, post = opts.method === 'POST', body = opts.body ? JSON.parse(opts.body) : {}, list = () => store.get('gc-repos', []);
   if (p === '/api/repos' && post) {
     const src = String(body.source || '').trim(), m = /^(?:https?:\/\/)?(?:www\.)?(?:github\.com\/)?([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:\/.*)?$/.exec(src);
-    if (!m || /^[\/~.]/.test(src)) throw new Error('Type owner/repo or paste a github.com URL. Local folders need the local server (python3 gitdraw.py --serve).');
+    if (!m || /^[\/~.]/.test(src)) throw new Error('Type owner/repo or paste a github.com URL.');
     const info = await repoInfo(`/repos/${m[1]}/${m[2]}`), x = { id: 'gh:' + info.full_name.toLowerCase(), kind: 'github', name: info.full_name, owner: info.owner.login, repo: info.name }, l = list();
     if (!l.some(y => y.id === x.id)) l.push(x); store.set('gc-repos', l); return { repos: l, added: x.id };
   }
   if (p === '/api/repos/remove' && post) { const l = list().filter(y => y.id !== body.id); store.set('gc-repos', l); return { repos: l }; }
   if (p === '/api/repos') return { repos: list() };
-  if (p === '/api/ls') return { dirs: [] };
   if (p === '/api/graph') {
     const x = list().find(y => y.id === q.get('repo')); if (!x) throw new Error('Add a repository first.');
-    const mx = Math.max(1, Math.min(100, +q.get('max') || 25)), ck = 'gc-cache-' + x.id + '-' + mx + (getToken() ? '-t' : ''), hit = post ? null : store.get(ck, null);
+    const mx = Math.max(1, Math.min(100, +q.get('max') || 25)), ck = 'gc-cache-' + x.id + '-' + mx + (authed() ? '-t' : ''), hit = post ? null : store.get(ck, null);
     let g; if (hit && Date.now() - hit.t < 600000) g = hit.g; else { g = await buildGraph(x, mx); store.set(ck, { t: Date.now(), g }); }
     const cur2 = [...new Set(g.lanes.flatMap(l => l.commits.map(c => c.hash)))].sort(), key = 'gc-seen-' + x.id, prev = store.get(key, null);
     g.fresh = prev ? cur2.filter(h => !prev.includes(h)) : []; if (post || !prev) store.set(key, cur2);
@@ -887,17 +852,11 @@ async function staticApi(path, opts = {}) {
   }
   throw new Error('Not found');
 }
-// ----- token box (only shown in browser-only mode) -----
-function renderToken() { const has = !!getToken(); $('tokenBox').style.display = STATIC ? '' : 'none'; $('tok').placeholder = has ? 'Token saved. Paste a new one to replace it' : 'Paste a read-only token (optional)'; $('tokClear').style.display = has ? '' : 'none'; updateRate(); }
-$('tokSave').onclick = () => { const v = $('tok').value.trim(); if (!v) return; store.set(TOKEN_KEY, v); $('tok').value = ''; renderToken(); toast('Token saved'); if (cur) openRepo(true); };
-$('tokClear').onclick = () => { store.set(TOKEN_KEY, ''); renderToken(); toast('Token removed'); };
 
 // ----- start -----
 (async () => {
-  if (['localhost', '127.0.0.1'].includes(location.hostname)) {  // only a local server can exist here; on a public site skip the probe
-    try { const r = await fetch('api/repos', { headers: { 'X-Gitdraw': '1' } }); STATIC = !(r.ok && (r.headers.get('content-type') || '').includes('json')); } catch { STATIC = true; }
-  } else STATIC = true;
-  $('src').placeholder = STATIC ? 'owner/repo or github.com URL' : 'owner/repo, URL, or local folder'; setPopMsg(); renderToken();
+  try { AUTH = await (await fetch('api/auth')).json(); } catch {}
+  setPopMsg();
   try {
     repos = (await api('api/repos')).repos; if (!repos.some(r => r.id === cur)) cur = repos[0] ? repos[0].id : null;
     fillRepos(); renderRepoList();

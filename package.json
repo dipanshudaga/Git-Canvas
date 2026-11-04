@@ -1,16 +1,15 @@
 {
   "name": "git-canvas",
   "version": "1.0.0",
-  "private": true,
-  "description": "Git Canvas shows a GitHub repository as a map. Each branch is a column. Each commit is a card. See merges, conflicts, pull requests, and CI.",
-  "homepage": "https://dipanshudaga.github.io/Git-Canvas/",
+  "description": "See a GitHub repository as a map of branches and commits. Run one command in a terminal.",
+  "bin": { "git-canvas": "bin/git-canvas.js" },
+  "files": ["bin/", "index.html", "favicon.svg", "favicon.png", "apple-touch-icon.png"],
+  "engines": { "node": ">=18" },
+  "scripts": { "start": "node bin/git-canvas.js" },
+  "homepage": "https://github.com/dipanshudaga/Git-Canvas#readme",
   "repository": { "type": "git", "url": "git+https://github.com/dipanshudaga/Git-Canvas.git" },
   "bugs": { "url": "https://github.com/dipanshudaga/Git-Canvas/issues" },
   "author": "Dipanshu Daga",
   "license": "MIT",
-  "keywords": ["git", "github", "git-graph", "visualization", "branches", "merge-conflicts", "infinite-canvas", "developer-tools"],
-  "scripts": {
-    "dev": "python3 gitdraw.py --serve --repo .",
-    "dev:static": "python3 -m http.server 8080"
-  }
+  "keywords": ["git", "github", "git-graph", "visualization", "branches", "merge-conflicts", "infinite-canvas", "developer-tools", "cli"]
 }

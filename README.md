@@ -3,9 +3,25 @@
 Git Canvas shows a GitHub repository as a map.
 Each branch is a column. Each commit is a card.
 
-![A Git Canvas map. Branches are colored columns. Commits are cards. A panel explains a merge conflict.](assets/preview.png)
+![A Git Canvas map. Branches are colored columns. Commits are cards. A panel explains a merge conflict.](https://raw.githubusercontent.com/dipanshudaga/Git-Canvas/main/assets/preview.png)
 
-**Open the page:** <https://dipanshudaga.github.io/Git-Canvas/>
+## Start
+
+Requirement: Node.js 18 or later.
+
+Run this command in a terminal:
+
+```bash
+npx git-canvas
+```
+
+Git Canvas opens in your browser. Paste a link to a GitHub repository.
+
+To open a repository at once, add its name:
+
+```bash
+npx git-canvas facebook/react
+```
 
 ## What you can see
 
@@ -16,97 +32,65 @@ Each branch is a column. Each commit is a card.
 
 Click a card or a branch title. Git Canvas shows a plain explanation and the Git commands for that item.
 
-## Open a repository
+## Open a private repository
 
-1. Open the Git Canvas page. The canvas opens at once, with the repository menu.
-2. Paste a link to a public GitHub repository.
-3. Press **Add**.
+1. Install the GitHub CLI: <https://cli.github.com>
+2. Run `gh auth login`.
+3. Start Git Canvas again.
 
-NOTE: A public repository needs no sign-in and no token.
+Git Canvas uses your GitHub CLI login. It also reads the `GITHUB_TOKEN` variable.
 
-You can also paste a link anywhere on the page. Git Canvas opens it.
+NOTE: A login raises the limit from 60 to 5,000 requests each hour. It also adds CI results.
 
-## Share a map
+CAUTION: The login stays on your computer. The browser never receives it.
 
-Add `?repo=owner/name` to the page address.
+## Options
 
-Example: `https://dipanshudaga.github.io/Git-Canvas/?repo=tauri-apps/tauri`
-
-Each person who opens the link sees the map.
+| Option | Purpose |
+|---|---|
+| `-p`, `--port <number>` | Use this port. The default is 4747 |
+| `--no-open` | Do not open the browser |
+| `-v`, `--version` | Show the version |
+| `-h`, `--help` | Show the help |
 
 ## Know the limits
 
-GitHub gives each network 60 anonymous requests each hour. One repository uses about 18 requests.
+Without a login, GitHub gives each network 60 requests each hour. One repository uses about 18 requests.
 
 - Git Canvas keeps the results for 10 minutes. A second visit uses no requests.
-- Without a token, Git Canvas loads the 12 branches with the newest pushes.
-- Without a token, Git Canvas shows no CI results.
+- Without a login, Git Canvas loads the 12 branches with the newest pushes.
 - A fork point older than 300 commits on the main branch has no line.
 - A squash-merged branch looks unmerged. Squash merging changes the commits.
 
 If GitHub refuses a request, Git Canvas shows the time to wait.
 
-## Open a private repository (optional)
-
-CAUTION: Make the token for your own use. Do not give it to other people. Paste it only into the official page.
-
-1. Open <https://github.com/settings/personal-access-tokens/new>.
-2. Select the private repository.
-3. Give read-only access to **Contents**, **Pull requests**, **Metadata**, **Commit statuses**, and **Checks**.
-4. Copy the token.
-5. In Git Canvas, open the repository menu. Open **Advanced**.
-6. Paste the token. Press **Save**.
-
-NOTE: A token also raises the limit to 5,000 requests each hour and adds CI results.
-
-The browser keeps the token. Git Canvas sends it only to `api.github.com`.
-
-## Publish your own copy
-
-1. Put this repository in your GitHub account.
-2. Open **Settings**, then **Pages**.
-3. Under **Build and deployment**, select **Deploy from a branch**.
-4. Select the branch `main` and the folder `/ (root)`.
-5. Press **Save**. Wait 1 or 2 minutes.
-6. Open `https://<your-name>.github.io/<repository>/`.
-
-## Use it on your computer
-
-The local mode also reads folders on your computer. It uses your `gh` login and runs exact conflict checks.
-
-Requirements:
-
-- Python 3
-- Git 2.38 or later
-- GitHub CLI (only for GitHub repositories)
-
-Procedure:
-
-1. Download this repository.
-2. Open a terminal in the folder.
-3. Run `gh auth login`. Do this step only for GitHub repositories.
-4. Run `npm run dev`.
-5. Open <http://127.0.0.1:8765>.
-
-NOTE: `npm run dev` installs nothing. It starts the Python server.
-
 ## How it works
 
-The online page has no server. The browser sends requests to `api.github.com`. The browser draws the map.
+Git Canvas starts a small server on your computer. The server listens on `127.0.0.1` only. Other computers cannot reach it.
+
+The page asks the server for GitHub data. The server adds your login and sends the request to `api.github.com`. The page draws the map.
+
+Git Canvas reads GitHub only. It does not read folders or commits on your computer.
 
 Git Canvas has no account, no database, and no analytics. The page loads no scripts from other sites.
+
+## Develop
+
+1. Download this repository.
+2. Run `npm start`.
+
+Git Canvas has no dependencies to install.
 
 ## Files
 
 | File | Purpose |
 |---|---|
-| `index.html` | The page and all the code for the online mode |
-| `gitdraw.py` | The local server. It reads Git folders and runs `gh` |
+| `bin/git-canvas.js` | The command and the local server |
+| `index.html` | The page and all the code that draws the map |
 | `design/DESIGN-SYSTEM.md` | The colors, type sizes, and grid rules |
+| `design/logo/` | The source file of the logo |
 | `assets/` | The preview image |
 | `favicon.svg`, `favicon.png`, `apple-touch-icon.png` | The page icons |
-| `design/logo/` | The source file of the logo |
-| `.nojekyll` | Tells GitHub Pages to publish the files as they are |
 
 ## Licence
 
