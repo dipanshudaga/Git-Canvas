@@ -18,9 +18,9 @@ Click a card or a branch title. Git Canvas shows a plain explanation and the Git
 
 ## Open a repository
 
-1. Open the Git Canvas page.
+1. Open the Git Canvas page. The canvas opens at once, with the repository menu.
 2. Paste a link to a public GitHub repository.
-3. Press **Open**.
+3. Press **Add**.
 
 NOTE: A public repository needs no sign-in and no token.
 

@@ -41,7 +41,6 @@
     --t-caption:400 12px/16px var(--font);        /* dates, helper text */
     --t-caption-strong:600 12px/16px var(--font); /* chips, badges */
     --t-overline:700 12px/16px var(--font);       /* section labels, tags (uppercase, +6% tracking) */
-    --t-display:700 32px/40px var(--font);       /* front page headline only */
     --t-code:400 12px/16px var(--mono); --t-code-strong:600 12px/16px var(--mono);
   }
   * { box-sizing:border-box }
@@ -176,24 +175,7 @@
   #empty { position:fixed; inset:0; display:none; place-items:center; color:var(--muted); pointer-events:none; text-align:center; font:var(--t-title); padding:0 20%; z-index:1 }
   #empty small { font:var(--t-body) }
   body.empty #dock, body.empty #zoom { display:none }
-  #hero { position:fixed; inset:0; display:none; overflow:auto; z-index:6; background:var(--bg) }
-  #hero.open { display:block }
-  body.empty #tl, body.empty #status { display:none }
-  .land { max-width:960px; margin:0 auto; padding:var(--s5) var(--s5) var(--s7) }
-  .land-top { display:flex; align-items:center; justify-content:space-between; height:var(--bar) }
-  .land-brand { display:flex; align-items:center; gap:var(--s2); font:var(--t-title); font-weight:700 }
-  .land-link { display:inline-flex; align-items:center; gap:var(--s2); height:var(--c); padding:0 var(--s3); border-radius:var(--r2); font:var(--t-label); color:var(--ink); text-decoration:none } .land-link:hover { background:var(--fill) }
-  .land-main { max-width:640px; margin:var(--s7) auto var(--s6); text-align:center }
-  .land-main h1 { font:var(--t-display); margin:0 0 var(--s3) } .land-lead { font:var(--t-title); color:var(--muted); margin:0 0 var(--s5); font-weight:400 }
-  .land-main .in { max-width:560px; margin:0 auto } .land-main .note { margin-top:var(--s3) } .land-main .note.err { color:var(--bad) }
-  .hero-try { margin-top:var(--s4); color:var(--muted); font:var(--t-caption) }
-  .land-shot { display:block; width:100%; height:auto; border-radius:var(--r3); box-shadow:var(--e2); margin:var(--s6) 0; background:#fff }
-  .land-grid { display:grid; grid-template-columns:1fr 1fr; gap:var(--s4); margin-bottom:var(--s7) }
-  .land-card { background:#fff; border-radius:var(--r3); box-shadow:var(--e1); padding:var(--s5) }
-  .land-card h2, .land-steps h2 { font:var(--t-title); margin:0 0 var(--s2) } .land-card p { color:var(--ink-2); margin:0 }
-  .land-steps { background:#fff; border-radius:var(--r3); box-shadow:var(--e1); padding:var(--s5); margin-bottom:var(--s6) } .land-steps ol { margin:var(--s3) 0 0; padding-left:var(--s5) } .land-steps li { margin:var(--s2) 0 }
-  .land-foot { text-align:center; color:var(--muted); font:var(--t-caption) }
-  @media (max-width:720px) { .land-grid { grid-template-columns:1fr } .land-main { margin-top:var(--s6) } .land-main h1 { font:var(--t-heading) } .land-main .in { flex-wrap:wrap } }
+  .note:empty { display:none }
   #toast { position:fixed; left:50%; bottom:calc(var(--edge) + var(--bar) + var(--s2)); transform:translateX(-50%); background:#14141c; color:#fff; height:var(--c); padding:0 var(--s4); border-radius:var(--pill); font:var(--t-label); z-index:20; display:none; align-items:center }
 </style>
 </head>
@@ -201,38 +183,6 @@
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-branch" viewBox="0 0 24 24"><line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></symbol><symbol id="i-pr" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" x2="6" y1="9" y2="21"/></symbol><symbol id="i-filter" viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol><symbol id="i-unfold" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></symbol><symbol id="i-fold" viewBox="0 0 24 24"><path d="m7 20 5-5 5 5"/><path d="m7 4 5 5 5-5"/></symbol><symbol id="i-fit" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol><symbol id="i-tidy" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol><symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></symbol><symbol id="i-github" viewBox="0 0 24 24"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol><symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol><symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></symbol><symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/></symbol></defs></svg>
 <div id="viewport"><div id="world"><svg id="edges"></svg></div></div>
 <div id="empty"><div id="emptyMsg"></div></div>
-<div id="hero"><div class="land">
-  <header class="land-top"><span class="land-brand"><svg viewBox="0 0 1000 1000" width="27" height="27" aria-hidden="true"><path d="M575 425H1000V1000H150.004V850H850V575H575V705.396H425V294.602H575V425ZM850 150H150V849.998H0V0H850V150Z" fill="#4c1d95"/></svg>Git Canvas</span><a class="land-link" href="https://github.com/dipanshudaga/Git-Canvas" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a></header>
-  <section class="land-main">
-    <h1>See any GitHub repository as a map</h1>
-    <p class="land-lead">Each branch is a column. Each commit is a card. Paste a link to start.</p>
-    <div class="in"><input type="text" id="heroSrc" placeholder="github.com/owner/repo" spellcheck="false" autocomplete="off" aria-label="Link to a GitHub repository"><button class="tb primary" id="heroGo">Open</button></div>
-    <p class="note" id="heroMsg">Public repositories need no sign-in.</p>
-    <div class="hero-try">Try <span class="try" data-try="tauri-apps/tauri">tauri-apps/tauri</span><span class="try" data-try="facebook/react">facebook/react</span><span class="try" data-try="vercel/next.js">vercel/next.js</span></div>
-  </section>
-  <img class="land-shot" src="assets/preview.png" alt="A Git Canvas map. Branches are colored columns. Commits are cards. A panel shows a merge conflict." width="1920" height="1080">
-  <section class="land-grid">
-    <div class="land-card"><h2>Branches and commits</h2><p>See how work splits and joins. Newer commits are higher. Lines show where each branch started and where it merged.</p></div>
-    <div class="land-card"><h2>Merge conflicts</h2><p>See which branches clash with the main branch, and in which files. Git Canvas shows the problem before you merge.</p></div>
-    <div class="land-card"><h2>Pull requests and CI</h2><p>See each pull request, its review state, and the CI result of the newest commit. Tags show the releases.</p></div>
-    <div class="land-card"><h2>Private by design</h2><p>Git Canvas runs in your browser. It talks only to GitHub. It has no server, no account, and no analytics.</p></div>
-  </section>
-  <section class="land-steps">
-    <h2>How to use it</h2>
-    <ol><li><b>Paste</b> a link to a public GitHub repository.</li><li><b>Look</b> at the map. Drag to move. Scroll to zoom.</li><li><b>Click</b> a card or a branch title for a plain explanation.</li></ol>
-  </section>
-  <footer class="land-foot">Free and open source under the MIT licence. <a class="link" href="https://github.com/dipanshudaga/Git-Canvas" target="_blank" rel="noopener">View the code on GitHub</a>. Git Canvas is not made by GitHub.</footer>
-</div></div>
-<div id="empty"><div id="emptyMsg"></div></div>
-<div id="hero"><div class="hero-card">
-  <svg viewBox="0 0 1000 1000" width="34" height="34" aria-hidden="true"><path d="M575 425H1000V1000H150.004V850H850V575H575V705.396H425V294.602H575V425ZM850 150H150V849.998H0V0H850V150Z" fill="#4c1d95"/></svg>
-  <h1>See any GitHub repo as a map</h1>
-  <p>Paste a repository link. Public repos open instantly, with no sign-in.</p>
-  <div class="in"><input type="text" id="heroSrc" placeholder="github.com/owner/repo" spellcheck="false" autocomplete="off"><button class="tb primary" id="heroGo">Open</button></div>
-  <p class="note" id="heroMsg"></p>
-  <div class="hero-try">Try <span class="try" data-try="tauri-apps/tauri">tauri-apps/tauri</span><span class="try" data-try="facebook/react">facebook/react</span><span class="try" data-try="vercel/next.js">vercel/next.js</span></div>
-</div></div>
-
 <div id="tl" class="float">
   <span class="logo"><svg viewBox="0 0 1000 1000" width="20" height="20" aria-hidden="true"><path d="M575 425H1000V1000H150.004V850H850V575H575V705.396H425V294.602H575V425ZM850 150H150V849.998H0V0H850V150Z" fill="#4c1d95"/></svg>Git Canvas</span>
   <button class="rb" id="repoBtn" data-pop="pop" aria-haspopup="true"><span id="repoName">…</span><svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
@@ -249,15 +199,14 @@
 <div id="pop" class="float pop caret">
   <div class="in"><input type="text" id="src" placeholder="owner/repo or github.com URL" spellcheck="false" autocomplete="off"><button class="tb primary" id="addGo">Add</button></div>
   <div id="sug"></div>
-  <div id="tryBox" class="note" style="display:none">Try: <span class="try" data-try="tauri-apps/tauri">tauri-apps/tauri</span><span class="try" data-try="facebook/react">facebook/react</span><span class="try" data-try="vercel/next.js">vercel/next.js</span></div>
+  <div id="tryBox" class="note" style="display:none">Try <span class="try" data-try="tauri-apps/tauri">tauri-apps/tauri</span><span class="try" data-try="facebook/react">facebook/react</span><span class="try" data-try="vercel/next.js">vercel/next.js</span></div>
   <h4 class="ph">Repositories</h4>
   <div id="repoList"></div>
   <p id="popmsg" class="note"></p>
   <details id="tokenBox" style="display:none">
-    <summary class="ph" style="cursor:pointer">Advanced: private repos and higher limits</summary>
+    <summary class="ph" style="cursor:pointer">Advanced</summary>
     <div class="in"><input type="password" id="tok" autocomplete="off" spellcheck="false"><button class="tb primary" id="tokSave">Save</button></div>
-    <p class="note">Not needed for public repos. A <b>read-only token</b> lets you open <b>private repos</b>, raises GitHub's free limit from 60 to 5,000 requests/hour, and adds CI status. It stays in this browser and only goes to api.github.com. <a class="link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create one <svg class="i xs" aria-hidden="true"><use href="#i-external"/></svg></a> <button class="try" id="tokClear" style="display:none">Remove saved token</button></p>
-    <p class="note" id="rateInfo"></p>
+    <p class="note">A read-only token opens private repos and raises GitHub's free limit. <a class="link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create one <svg class="i xs" aria-hidden="true"><use href="#i-external"/></svg></a> <button class="try" id="tokClear" style="display:none">Remove saved token</button></p>
   </details>
 </div>
 
@@ -732,26 +681,30 @@ const updateStatus = () => {
   $('status').textContent = `${shown === tot ? tot : shown + ' of ' + tot} branch${tot === 1 ? '' : 'es'} · ${n} commits` + (conf ? ` · ${conf} conflicting` : '') + (bad ? ` · ${bad} failing CI` : '') + (d.skipped ? ` · ${d.skipped} older not loaded` : '') + (STATIC && rate.remaining != null && rate.remaining < 15 ? ` · ${rate.remaining} free GitHub requests left` : '') + (f ? ` · ${f} new` : '');
 };
 const effMax = () => STATIC && !getToken() ? Math.min(flt.max, 12) : flt.max;  // without a token, stay well inside GitHub's free 60 requests/hour
-const showHero = () => { clearBoard(); data = null; L = null; $('empty').style.display = 'none'; $('hero').classList.add('open'); document.body.classList.add('empty'); $('status').textContent = 'Paste a repository link to begin'; setTimeout(() => $('heroSrc').focus(), 50); };
+const showStart = () => {  // no repository yet: the canvas itself is the home page, with the repository menu open
+  clearBoard(); data = null; L = null; document.body.classList.add('empty'); $('emptyMsg').textContent = 'Paste a link to a GitHub repository'; $('empty').style.display = 'grid';
+  setTimeout(() => { if (!$('pop').classList.contains('open')) togglePop($('pop'), $('repoBtn'), false); renderRepoList(); $('src').focus(); }, 60);
+};
 const showEmpty = msg => { clearBoard(); data = null; L = null; $('emptyMsg').innerHTML = msg; $('empty').style.display = 'grid'; };
 const openRepo = async reload => {
-  if (!cur) return showHero();
+  if (!cur) return showStart();
   busy(true, reload ? (STATIC ? 'asking GitHub…' : 'reading git & checking conflicts…') : 'loading…');
   try {
     const d = await api(`api/graph?repo=${encodeURIComponent(cur)}&max=${effMax()}`, { method: reload ? 'POST' : 'GET' });
     data = d; data.github = (repos.find(r => r.id === cur) || {}).kind === 'github';
     expanded = new Set(store.get(expKey(), [])); offs = store.get(offKey(), {}); laneOrder = store.get(ordKey(), []); for (const k of Object.keys(offs)) if (k.startsWith('L:')) delete offs[k]; deselect(); closePops();  // (columns are reordered now, so old free-float offsets are dropped)
     clearBoard(); draw(false); syncFilters(); updateStatus(); goNewest();
-    $('empty').style.display = 'none'; $('hero').classList.remove('open'); document.body.classList.remove('empty'); setExp(false);
+    $('empty').style.display = 'none'; document.body.classList.remove('empty'); setExp(false);
     if (STATIC) { const nm = (repos.find(r => r.id === cur) || {}).name; if (nm) try { history.replaceState(null, '', '?repo=' + nm); } catch {} }  // the address bar is now a shareable link
   } catch (e) { $('status').textContent = 'error: ' + e.message; showEmpty(esc(e.message)); }
   busy(false);
 };
 
 // ----- repository menu -----
-const setPopMsg = () => { const m = $('popmsg'); m.className = 'note'; m.innerHTML = STATIC ? 'Reads the repo straight from GitHub in your browser. Nothing is uploaded anywhere else.' : 'Read through the GitHub API with your <code>gh</code> login, nothing is cloned. For a local folder, start typing a path (<code>/</code> or <code>~</code>).'; };
+const setPopMsg = () => { const m = $('popmsg'); m.className = 'note'; m.textContent = ''; };
 const fillRepos = () => { $('repoName').textContent = (repos.find(r => r.id === cur) || {}).name || 'Add a repository'; };
 function renderRepoList() {
+  $('tryBox').style.display = STATIC && !repos.length ? '' : 'none';  // example links are only for the very first visit
   $('repoList').innerHTML = repos.length ? repos.map(r => `<div class="li${r.id === cur ? ' cur' : ''}" data-id="${esc(r.id)}">${ico(r.kind === 'github' ? 'github' : 'folder')}<span class="nm">${esc(r.name)}</span><span class="kind">${r.kind === 'github' ? 'GitHub' : 'Local'}</span><button class="rm" data-rm="${esc(r.id)}" title="Remove from list" aria-label="Remove">${ico('x')}</button></div>`).join('') : '<p class="note" style="margin:0">None yet. Add one above.</p>';
 }
 $('repoList').onclick = async e => {
@@ -771,15 +724,12 @@ async function addSource(src, msg, btn) {
   if (btn) btn.disabled = true; if (msg) { msg.className = 'note'; msg.textContent = 'Opening…'; }
   try {
     const r = await api('api/repos', { method: 'POST', body: JSON.stringify({ source: src }) });
-    repos = r.repos; cur = r.added; store.set('gc-repo', cur); fillRepos(); renderRepoList(); closePops(); $('src').value = ''; $('heroSrc').value = ''; setPopMsg();
+    repos = r.repos; cur = r.added; store.set('gc-repo', cur); fillRepos(); renderRepoList(); closePops(); $('src').value = ''; setPopMsg();
     await openRepo(true); if (msg) msg.textContent = '';
   } catch (e) { if (msg) { msg.className = 'note err'; msg.textContent = e.message; } else toast(e.message); }
   if (btn) btn.disabled = false;
 }
 const addRepo = () => addSource($('src').value, $('popmsg'), $('addGo'));
-const heroGo = () => addSource($('heroSrc').value, $('heroMsg'), $('heroGo'));
-$('heroGo').onclick = heroGo; $('heroSrc').onkeydown = e => { if (e.key === 'Enter') heroGo(); };
-$('hero').addEventListener('click', e => { const t = e.target.closest('[data-try]'); if (t) { $('heroSrc').value = t.dataset.try; heroGo(); } });
 // paste a link anywhere on the page and it opens
 window.addEventListener('paste', e => {
   if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
@@ -810,7 +760,7 @@ $('src').onkeydown = e => {
 // ======== browser-only GitHub client (used on GitHub Pages, where there is no local server) ========
 const TOKEN_KEY = 'gc-token', rate = { remaining: null, limit: null };
 const getToken = () => store.get(TOKEN_KEY, '') || '';
-const updateRate = () => { $('rateInfo').textContent = rate.remaining != null ? `GitHub API quota: ${rate.remaining} of ${rate.limit} requests left this hour` : ''; };
+const updateRate = () => {};  // the free-quota warning shows in the status line when it is low
 const resetIn = r => { const t = +r.headers.get('x-ratelimit-reset'); return t ? Math.max(1, Math.ceil((t * 1000 - Date.now()) / 60000)) + ' min' : 'a while'; };
 async function ghReq(path, { gql } = {}) {
   const tok = getToken(), headers = { Accept: 'application/vnd.github+json' };
@@ -940,15 +890,15 @@ $('tokClear').onclick = () => { store.set(TOKEN_KEY, ''); renderToken(); toast('
   if (['localhost', '127.0.0.1'].includes(location.hostname)) {  // only a local server can exist here; on a public site skip the probe
     try { const r = await fetch('api/repos', { headers: { 'X-Gitdraw': '1' } }); STATIC = !(r.ok && (r.headers.get('content-type') || '').includes('json')); } catch { STATIC = true; }
   } else STATIC = true;
-  $('tryBox').style.display = STATIC ? '' : 'none'; $('src').placeholder = STATIC ? 'owner/repo or github.com URL' : 'owner/repo, URL, or local folder'; setPopMsg(); renderToken();
+  $('src').placeholder = STATIC ? 'owner/repo or github.com URL' : 'owner/repo, URL, or local folder'; setPopMsg(); renderToken();
   try {
     repos = (await api('api/repos')).repos; if (!repos.some(r => r.id === cur)) cur = repos[0] ? repos[0].id : null;
     fillRepos(); renderRepoList();
     const want = new URLSearchParams(location.search).get('repo') || (location.hash.length > 1 ? decodeURIComponent(location.hash.slice(1)) : '');  // shareable link: ?repo=owner/name
     const have = want && repos.find(r => r.name.toLowerCase() === want.toLowerCase());
-    if (want && !have) { if (!cur) $('hero').classList.add('open'); $('heroSrc').value = want; await addSource(want, $('heroMsg'), $('heroGo')); }
+    if (want && !have) { await addSource(want, $('popmsg'), $('addGo')); }
     else { if (have) { cur = have.id; store.set('gc-repo', cur); fillRepos(); } await openRepo(!have); }
-    if (!cur) $('hero').classList.add('open');
+    if (!cur) showStart();
   } catch (e) { $('status').textContent = 'error: ' + e.message; }
 })();
 </script>

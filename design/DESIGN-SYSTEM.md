@@ -12,7 +12,7 @@ Everything in `index.html` draws from the tokens at the top of its `<style>` blo
 
 Canvas sizes are multiples of 8 and cards **snap to 8px when dragged**: commit card 256x128, branch title 256x128, PR card 256x120, column pitch 320 (64 gutter), row pitch 160 (32 gap), title-to-content gap 24. The dot grid is 32px.
 
-## Typography: 4 sizes in the app (plus 1 display size on the front page), 3 weights
+## Typography: 4 sizes, 3 weights
 | Token | Font | Use |
 |---|---|---|
 | `--t-heading` | 700 20/28 | inspector title, big numbers |
@@ -22,7 +22,6 @@ Canvas sizes are multiples of 8 and cards **snap to 8px when dragged**: commit c
 | `--t-caption` | 400 12/16 | dates, authors, helper text |
 | `--t-caption-strong` | 600 12/16 | chips, badges, pills |
 | `--t-overline` | 700 12/16, uppercase, +6% tracking | section labels, MERGE / SPLIT / NEW |
-| `--t-display` | 700 32/40 | the front-page headline only |
 | `--t-code` / `--t-code-strong` | 400 / 600 12/16 mono | hashes, file names, commands |
 
 Never set `font-size` or `font-weight` directly; use `font: var(--t-...)`.
