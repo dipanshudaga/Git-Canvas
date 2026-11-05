@@ -319,6 +319,9 @@ function layout() {
         ln.openRuns.push({ key: 'gap:' + all[idx[k]].hash, after: all[idx[k]], last: all[idx[k + 1] - 1], before: all[idx[k + 1]], count: idx[k + 1] - idx[k] - 1 });
       }
       idx = [...keep].sort((a, b) => a - b);
+      const lastIdx = idx.length ? idx[idx.length - 1] : -1, tailN = all.length - (lastIdx + 1);  // commits older than the deepest fork point
+      ln.tailOpen = !ln.open && tailN > 0 && expanded.has('tail:' + ln.name); ln.tailCount = tailN;
+      if (ln.tailOpen) { for (let i = lastIdx + 1; i < all.length; i++) keep.add(i); idx = [...keep].sort((a, b) => a - b); }
       if (ln.open) { ln.shown = all; }
       else {
         ln.shown = idx.map(i => all[i]);
@@ -384,7 +387,7 @@ function layout() {
     ln.headItem = add('head:' + ln.name, 'head', ln, ln.x, headY, CW, HEAD_H);
     const lowest = ln.cards.length ? Math.max(...ln.cards.map(k => k.y)) : y0;
     ln.moreItem = null;
-    if (ln.hiddenLocal > 0 || (ln.open && ln.commits.length > START) || (ln.more || 0) !== 0)
+    if (ln.hiddenLocal > 0 || ln.tailOpen || (ln.open && ln.commits.length > START) || (ln.more || 0) !== 0)
       ln.moreItem = add('more:' + ln.name, 'more', ln, ln.x, lowest + CH + GAP, CW, 40);
   }
   return { lanes, items, forkOf, at: Object.fromEntries(Object.values(items).filter(i => i.kind === 'card').map(i => [i.c.hash, i])), row };
@@ -467,7 +470,8 @@ function draw(animate = true, anchorKey = null, mutate = null) {
   }
   for (const ln of L.lanes) if (ln.moreItem) {
     const it = ln.moreItem, hid = ln.hiddenLocal;
-    if (hid > 0) { const d = mk(it, 'more', `${ico('chevron-down')}Show ${hid} older commit${hid > 1 ? 's' : ''}`); d.style.borderColor = d.style.color = ln.color; d.onclick = () => toggleLane(ln.name); }
+    if (ln.tailOpen) { const d = mk(it, 'more', `${ico('chevron-up')}Hide ${ln.tailCount} older commit${ln.tailCount > 1 ? 's' : ''}`); d.style.borderColor = d.style.color = ln.color; d.onclick = () => toggleTail(ln.name); }
+    else if (hid > 0) { const d = mk(it, 'more', `${ico('chevron-down')}Show ${hid} older commit${hid > 1 ? 's' : ''}`); d.style.borderColor = d.style.color = ln.color; d.onclick = () => ln.is_base ? toggleTail(ln.name) : toggleLane(ln.name); }
     else if (ln.open && ln.commits.length > START) { const d = mk(it, 'more', ico('chevron-up') + 'Collapse'); d.style.borderColor = d.style.color = ln.color; d.onclick = () => toggleLane(ln.name); }
     else mk(it, 'more note', `${ln.more > 0 ? '+' + ln.more + ' even older not loaded' : 'Older history not loaded'}${data.github ? ' (GitHub API limit)' : ''}`);
   }
@@ -651,6 +655,7 @@ function focusKey(key, select) {
 
 // ---------- expand / filters ----------
 const toggleGap = g => { expanded.has(g.key) ? expanded.delete(g.key) : expanded.add(g.key); store.set(expKey(), [...expanded]); draw(true, g.after.hash); };
+const toggleTail = name => { const k = 'tail:' + name; expanded.has(k) ? expanded.delete(k) : expanded.add(k); store.set(expKey(), [...expanded]); draw(true, 'more:' + name); };
 const toggleLane = name => { expanded.has(name) ? expanded.delete(name) : expanded.add(name); store.set(expKey(), [...expanded]); draw(true, 'more:' + name); };
 $('expAll').onclick = () => {
   const all = L.lanes.every(l => expanded.has(l.name) || l.commits.length <= START);
