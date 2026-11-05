@@ -44,7 +44,7 @@ npx mapgit facebook/react
 - Where each branch started, and where it merged.
 - Merge conflicts, pull requests, CI results, and tags.
 
-Click any card or branch for a plain explanation and the Git commands for it. Click a small **i** icon next to a word to learn what it means.
+Click any card or branch for a plain explanation and the Git commands for it. Hold the pointer over a small **i** icon next to a word to learn what it means.
 
 ## Private repositories
 

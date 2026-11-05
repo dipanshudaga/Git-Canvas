@@ -585,15 +585,24 @@ function inspect(key) {
   s.innerHTML = band + `<div class="body">${body}</div>`; s.classList.add('open'); document.body.classList.add('side'); s.scrollTop = 0;
 }
 const hideTip = () => { $('tip').style.display = 'none'; document.querySelectorAll('.tipbtn.on').forEach(n => n.classList.remove('on')); };
-document.addEventListener('click', e => {
-  const b = e.target.closest('.tipbtn');
-  if (!b) { if (!e.target.closest('#tip')) hideTip(); return; }
-  e.stopPropagation(); const was = b.classList.contains('on'); hideTip(); if (was) return;
+const showTip = b => {
   const t = TERMS[b.dataset.term], tip = $('tip'); if (!t) return;
-  tip.innerHTML = `<b>${esc(t[0])}</b><span>${esc(t[1])}</span>`; tip.style.display = 'block'; b.classList.add('on');
+  hideTip(); tip.innerHTML = `<b>${esc(t[0])}</b><span>${esc(t[1])}</span>`; tip.style.display = 'block'; b.classList.add('on');
   const r = b.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
   tip.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
   tip.style.top = (r.bottom + h + 12 < innerHeight ? r.bottom + 8 : Math.max(8, r.top - h - 8)) + 'px';
+};
+// The explanation shows while the pointer is over the icon (or the icon has keyboard focus). On touch screens, where there is no hover, a tap opens it.
+const canHover = matchMedia('(hover: hover)');
+document.addEventListener('mouseover', e => { const b = e.target.closest('.tipbtn'); if (b && canHover.matches) showTip(b); });
+document.addEventListener('mouseout', e => { const b = e.target.closest('.tipbtn'); if (b && canHover.matches && !b.contains(e.relatedTarget)) hideTip(); });
+document.addEventListener('focusin', e => { const b = e.target.closest('.tipbtn'); if (b && e.target.matches(':focus-visible')) showTip(b); });
+document.addEventListener('focusout', e => { if (e.target.closest('.tipbtn')) hideTip(); });
+document.addEventListener('click', e => {
+  const b = e.target.closest('.tipbtn');
+  if (!b) { if (!e.target.closest('#tip')) hideTip(); return; }
+  e.stopPropagation(); if (canHover.matches) return;
+  b.classList.contains('on') ? hideTip() : showTip(b);
 }, true);
 $('side').addEventListener('scroll', hideTip); window.addEventListener('resize', hideTip);
 $('side').addEventListener('click', e => {
