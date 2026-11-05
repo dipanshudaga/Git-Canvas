@@ -14,9 +14,7 @@ Each branch is a column. Each commit is a card.
 
 <br>
 
-Many people want to see how a Git repository fits together. The usual tools show one small part at a time: a list of commits, or a thin line of dots.
-
-Map Git draws the whole repository on one canvas. You see every branch, where each one started, and where it ended. Map Git only reads. It never changes your repository.
+Map Git draws a whole GitHub repository on one canvas. You see every branch, where it started, and where it merged. It only reads. It never changes your repository.
 
 ![A Map Git map. Branches are colored columns. Commits are cards. A panel explains a merge conflict.](https://raw.githubusercontent.com/dipanshudaga/Map-Git/main/assets/preview.png)
 
