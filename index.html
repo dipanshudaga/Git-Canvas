@@ -172,8 +172,8 @@
   #sug { margin-top:var(--s2); border-radius:var(--r2); max-height:200px; overflow:auto; display:none; box-shadow:0 0 0 1px var(--line) inset; padding:var(--s1) }
   #sug.open { display:block } #sug div { height:var(--c-sm); padding:0 var(--s2); border-radius:var(--r1); cursor:pointer; display:flex; align-items:center; gap:var(--s2); font:var(--t-body) }
   #sug div.on,#sug div:hover { background:var(--accent-bg) } #sug i { font:var(--t-caption-strong); margin-left:auto; color:var(--ok); background:var(--okbg); border-radius:var(--pill); padding:0 var(--s2) }
-  #help { right:var(--edge); bottom:calc(var(--edge) + var(--bar) + var(--s2)); padding:var(--s4); width:360px; max-width:calc(100vw - 2 * var(--edge)); max-height:calc(100vh - 2 * var(--edge) - var(--bar) - var(--s2) - var(--s4)); overflow-y:auto; display:none }
-  #help.open { display:block } #help h3 { font:var(--t-title); margin-bottom:var(--s3) } #help ul { padding-left:var(--s4) } #help li { margin-top:var(--s2) } #help li .i { vertical-align:-3px } #help h4 { font:var(--t-overline); letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:var(--s4) 0 var(--s1) } #help dt { font:var(--t-label); margin-top:var(--s3); display:flex; align-items:center; gap:var(--s2) } #help dd { font:var(--t-body); color:var(--muted); margin:var(--s1) 0 0 } #help .dot { width:12px; height:12px; border-radius:50%; flex:none }
+  #help { right:var(--edge); bottom:calc(var(--edge) + var(--bar) + var(--s2)); padding:var(--s4); width:360px; max-width:calc(100vw - 2 * var(--edge)); max-height:calc(100vh - 2 * var(--edge) - var(--bar) - var(--s2) - var(--s4)); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; padding-bottom:0; display:none }
+  #help.open { display:block } #help h3 { font:var(--t-title); margin:calc(-1 * var(--s4)) calc(-1 * var(--s4)) var(--s2); padding:var(--s4) var(--s4) var(--s3); position:sticky; top:0; background:var(--panel); z-index:1 } #help::after { content:''; display:block; position:sticky; bottom:0; height:32px; margin:0 calc(-1 * var(--s4)); background:linear-gradient(rgba(255,255,255,0), #fff 85%); pointer-events:none } #help ul { padding-left:var(--s4) } #help li { margin-top:var(--s2) } #help li .i { vertical-align:-3px } #help h4 { font:var(--t-overline); letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:var(--s4) 0 var(--s1) } #help dt { font:var(--t-label); margin-top:var(--s3); display:flex; align-items:center; gap:var(--s2) } #help dd { font:var(--t-body); color:var(--muted); margin:var(--s1) 0 0 } #help .dot { width:12px; height:12px; border-radius:50%; flex:none }
   .sw { display:inline-block; width:24px; height:0; border-top:3px solid; vertical-align:middle; margin-right:var(--s1) } .sw.d { border-top-style:dashed }
   #empty { position:fixed; inset:0; display:none; place-items:center; color:var(--muted); pointer-events:none; text-align:center; font:var(--t-title); padding:0 20%; z-index:1 }
   #empty small { font:var(--t-body) }
@@ -541,7 +541,7 @@ function conflictCallout(ln, list = true) {
 }
 function inspect(key) {
   const it = L && L.items[key], s = $('side'); if (!it) return;
-  selKey = key; document.querySelectorAll('.sel').forEach(n => n.classList.remove('sel')); els[key] && els[key].classList.add('sel');
+  $('help').classList.remove('open'); selKey = key; document.querySelectorAll('.sel').forEach(n => n.classList.remove('sel')); els[key] && els[key].classList.add('sel');
   const base = data.base, ln = it.ln; let band, body;
   const band_ = (color, kind, title) => `<div class="band" style="background:${color}"><button class="x" id="sx" aria-label="Close">${ico('x', 'lg')}</button><div class="kind">${kind}</div><h2>${esc(title)}</h2></div>`;
   if (it.kind === 'card') {
@@ -679,7 +679,7 @@ const goNewest = () => { const b = bounds(); view.k = Math.max(.8, Math.min(1, (
 const zoomAt = (cx, cy, k) => { k = Math.min(2.5, Math.max(.08, k)); view.x = cx - (cx - view.x) * (k / view.k); view.y = cy - (cy - view.y) * (k / view.k); view.k = k; applyView(); };
 $('tFit').onclick = fit;
 $('tTidy').onclick = () => { draw(true, null, () => { offs = {}; laneOrder = []; store.set(offKey(), {}); store.set(ordKey(), []); }); toast('Everything is back in place'); };
-$('tHelp').onclick = () => { closePops(); $('help').classList.toggle('open'); };
+$('tHelp').onclick = () => { closePops(); const open = !$('help').classList.contains('open'); if (open) { deselect(); hideTip(); } $('help').classList.toggle('open', open); };
 $('zi').onclick = () => zoomAt(vp.clientWidth / 2, vp.clientHeight / 2, view.k * 1.25);
 $('zo').onclick = () => zoomAt(vp.clientWidth / 2, vp.clientHeight / 2, view.k / 1.25);
 vp.addEventListener('wheel', e => {
