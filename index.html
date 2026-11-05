@@ -210,8 +210,8 @@
   <h3>Which branches to show</h3>
   <div class="frow"><label>Load up to<small>Newest first</small></label><div class="seg" id="fMax"></div></div>
   <div class="frow"><label>Hide stale<small>No commits for…</small></label><div class="seg" id="fStale"></div></div>
-  <div class="frow"><label>Hide fully merged<small>Already inside the main line</small></label><button class="switch" id="fMerged" aria-label="Hide fully merged"></button></div>
-  <div class="frow"><label>Only with conflicts<small>Would clash with the main line</small></label><button class="switch" id="fConf" aria-label="Only conflicting"></button></div>
+  <div class="frow"><label>Hide fully merged<small>Already inside the main branch</small></label><button class="switch" id="fMerged" aria-label="Hide fully merged"></button></div>
+  <div class="frow"><label>Only with conflicts<small>Would clash with the main branch</small></label><button class="switch" id="fConf" aria-label="Only conflicting"></button></div>
   <p id="fSummary" class="note"></p>
 </div>
 
@@ -219,7 +219,7 @@
   <h3>Git terms, in plain words</h3>
   <dl>
     <dt>Repository</dt><dd>A project and its whole history. This map shows one repository.</dd>
-    <dt>Main branch <span class="dot" style="background:#15803d"></span></dt><dd>The main line of the project, often named <code>main</code>. It holds the version everyone agrees is the real one. It is the green column.</dd>
+    <dt>Main branch <span class="dot" style="background:#15803d"></span></dt><dd>The branch the project is built on, usually named <code>main</code>. It holds the version everyone agrees is the real one. It is the green column.</dd>
     <dt>Branch <span class="dot" style="background:#6d28d9"></span></dt><dd>A separate line of work. You try an idea on a branch and the main code stays safe. Each colored column is a branch.</dd>
     <dt>Commit</dt><dd>A saved snapshot of the code, with a message and an author. Each card is a commit. The short code on it, such as <code>a1b2c3d</code>, is its ID.</dd>
     <dt>Merge <span class="sw"></span></dt><dd>Joining the work of one branch into another, usually into main. The solid line shows it.</dd>
@@ -257,7 +257,7 @@ const ico = (n, c = '') => `<svg class="i${c ? ' ' + c : ''}" aria-hidden="true"
 const TERMS = {
   commit: ['Commit', 'A saved snapshot of the code, with a message and an author. Each card on the map is one commit.'],
   branch: ['Branch', 'A separate line of work. You can try something on a branch while the main code stays safe. Each colored column is a branch.'],
-  main: ['Main branch', 'The main line of the project, often named main. It holds the version everyone agrees is the real one. Finished work is merged into it.'],
+  main: ['Main branch', 'The branch the project is built on, usually named main. It holds the version everyone agrees is the real one. Finished work is merged into it.'],
   merge: ['Merge', 'Joining the work of one branch into another, usually into main.'],
   split: ['Split point', 'The commit where a branch started from main.'],
   parent: ['Built on', 'The commit that came right before this one. Follow these links backwards to walk through the history.'],
@@ -281,7 +281,7 @@ const toast = t => { const n = $('toast'); n.textContent = t; n.style.display = 
 const CW = 256, CH = 128, PRH = 120, HEAD_H = 128, COLX = 320, ROWY = 160, GAP = 24, START = 6, UNIT = 8;
 const snap = v => Math.round(v / UNIT) * UNIT;
 const BASE_COLOR = '#15803d';
-// Branch colors: one tonal step (Tailwind "700") across eight hues, so they read as a family. Green is reserved for the main line;
+// Branch colors: one tonal step (Tailwind "700") across eight hues, so they read as a family. Green is reserved for the main branch;
 // red / amber / green are reserved for conflict / warning / OK, so none of these sit in those hues.
 const COLORS = ['#6d28d9', '#c2410c', '#0e7490', '#be185d', '#0f766e', '#a21caf', '#475569', '#0369a1'];  // violet, orange, cyan, pink, teal, fuchsia, slate, sky
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -422,7 +422,7 @@ function draw(animate = true, anchorKey = null, mutate = null) {
   };
   for (const ln of L.lanes) {
     const cf = ln.conflict, st = cf && cf.state;
-    let chips = ln.is_base ? '<span class="chip">main line</span>' : ln.ahead === 0 ? `<span class="chip">${ico('check', 'xs')}Fully merged</span>` : `<span class="chip">${ico('arrow-up', 'xs')}${ln.ahead}</span>` + (ln.behind ? `<span class="chip">${ico('arrow-down', 'xs')}${ln.behind}</span>` : '');
+    let chips = ln.is_base ? '<span class="chip">main branch</span>' : ln.ahead === 0 ? `<span class="chip">${ico('check', 'xs')}Fully merged</span>` : `<span class="chip">${ico('arrow-up', 'xs')}${ln.ahead}</span>` + (ln.behind ? `<span class="chip">${ico('arrow-down', 'xs')}${ln.behind}</span>` : '');
     if (!ln.is_base && ln.ahead) chips += st === 'conflict' ? `<span class="chip bad">${ico('alert', 'xs')}Conflicts</span>` : st === 'possible' ? `<span class="chip warn">${ico('alert', 'xs')}May conflict</span>` : st === 'clean' ? `<span class="chip ok">${ico('check', 'xs')}Clean</span>` : '';
     if (ln.ci) chips += `<span class="chip ${CI[ln.ci.state][2]}">${ico(CI[ln.ci.state][0], 'xs')}CI</span>`;
     if (!ln.is_base && ageDays(ln) > 60) chips += `<span class="chip">${ico('clock', 'xs')}${Math.round(ageDays(ln) / 30)}mo</span>`;
@@ -564,9 +564,9 @@ function inspect(key) {
       ${pr.state === 'OPEN' ? conflictCallout(ln) : ''}${checksSection(ln.ci)}${pr.url ? `<h4>On GitHub</h4><a class="link" href="${esc(pr.url)}" target="_blank" rel="noopener">Open pull request ${ico('external', 'xs')}</a>` : ''}`;
   } else {
     const cf = ln.conflict, tot = ln.ahead + ln.behind;
-    band = band_(ln.color, (ln.is_base ? 'Main line' : 'Branch') + info(ln.is_base ? 'main' : 'branch'), ln.name);
+    band = band_(ln.color, (ln.is_base ? 'Main branch' : 'Branch') + info(ln.is_base ? 'main' : 'branch'), ln.name);
     let why;
-    if (ln.is_base) why = `<div class="callout info"><b class="t">The main line</b>Finished work from other branches gets merged into <b>${esc(ln.name)}</b>. Click any other branch to see how it compares.</div>`;
+    if (ln.is_base) why = `<div class="callout info"><b class="t">The main branch</b>Finished work from other branches gets merged into <b>${esc(ln.name)}</b>. Click any other branch to see how it compares.</div>`;
     else {
       const p = [];
       p.push(ln.ahead ? `<b>${ico('arrow-up', 'xs')} ${ln.ahead} ahead:</b> ${ln.ahead} commit${ln.ahead > 1 ? 's' : ''} that <b>${esc(base)}</b> doesn't have yet. That's the work waiting to be merged.` : '');
