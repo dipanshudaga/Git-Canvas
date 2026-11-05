@@ -735,8 +735,8 @@ vp.addEventListener('pointerdown', e => {
   if (e.button !== 0) return;
   closePops(); $('help').classList.remove('open');
   if (!t) { if (e.target.closest('.more')) return; pan = { x: e.clientX - view.x, y: e.clientY - view.y, sx: e.clientX, sy: e.clientY }; return; }
-  const key = t.dataset.key, it = L.items[key], offKeyName = it.kind === 'head' ? 'L:' + it.ln.name : key;
-  drag = { key, it, el: t, name: offKeyName, sx: e.clientX, sy: e.clientY, o: [...off(offKeyName)], moved: false };
+  const key = t.dataset.key, it = L.items[key], isBranch = it.kind === 'head' || it.kind === 'pr', offKeyName = isBranch ? 'L:' + it.ln.name : key;
+  drag = { key, it, el: t, name: offKeyName, sx: e.clientX, sy: e.clientY, o: [...off(offKeyName)], moved: false, isBranch };
   e.preventDefault();
 });
 window.addEventListener('pointermove', e => {
@@ -744,20 +744,17 @@ window.addEventListener('pointermove', e => {
   if (!drag) return;
   const dx = (e.clientX - drag.sx) / view.k, dy = (e.clientY - drag.sy) / view.k;
   if (!drag.moved && Math.hypot(dx, dy) * view.k < 5) return;
-  if (!drag.moved) { drag.moved = true; drag.el.classList.add('dragging'); }
+  if (!drag.moved) { drag.moved = true; drag.el.classList.add('dragging'); tweenId++; OV = {}; }
   offs[drag.name] = [snap(drag.o[0] + dx), snap(drag.o[1] + dy)];
-  const group = drag.it.kind === 'head' ? Object.values(L.items).filter(i => i.ln === drag.it.ln) : [drag.it];
+  const group = drag.isBranch ? Object.values(L.items).filter(i => i.ln === drag.it.ln) : [drag.it];
   group.forEach(place); drawEdges();
 });
 window.addEventListener('pointerup', e => {
   if (pan) { if (Math.hypot(e.clientX - pan.sx, e.clientY - pan.sy) < 4) deselect(); pan = null; vp.classList.remove('drag'); }
   if (drag) {
     const d = drag; drag = null; d.el.classList.remove('dragging');
-    if (d.moved && d.it.kind === 'head') {  // dropping a branch title reorders the columns: it snaps into the nearest slot, so branches can never overlap
-      const ln = d.it.ln, cx = ln.x + off('L:' + ln.name)[0], names = L.lanes.slice(1).map(l => l.name).filter(n => n !== ln.name);
-      names.splice(Math.max(0, Math.min(names.length, Math.round(cx / COLX) - 1)), 0, ln.name);
-      draw(true, null, () => { laneOrder = [...names, ...laneOrder.filter(n => !names.includes(n))]; store.set(ordKey(), laneOrder); delete offs['L:' + ln.name]; store.set(offKey(), offs); });
-    } else if (d.moved) store.set(offKey(), offs); else if (d.it.kind !== 'more') inspect(d.key);
+    if (d.moved) store.set(offKey(), offs);
+    else if (d.it.kind !== 'more') inspect(d.key);
   }
 });
 
@@ -780,7 +777,7 @@ const openRepo = async reload => {
   try {
     const d = await api(`api/graph?repo=${encodeURIComponent(cur)}&max=${effMax()}`, { method: reload ? 'POST' : 'GET' });
     data = d; data.github = (repos.find(r => r.id === cur) || {}).kind === 'github';
-    expanded = new Set(store.get(expKey(), [])); offs = store.get(offKey(), {}); laneOrder = store.get(ordKey(), []); for (const k of Object.keys(offs)) if (k.startsWith('L:')) delete offs[k]; deselect(); closePops();  // (columns are reordered now, so old free-float offsets are dropped)
+    expanded = new Set(store.get(expKey(), [])); offs = store.get(offKey(), {}); laneOrder = store.get(ordKey(), []); deselect(); closePops();
     clearBoard(); draw(false); syncFilters(); updateStatus(); fit();
     $('empty').style.display = 'none'; document.body.classList.remove('empty'); setExp(false);
     { const nm = (repos.find(r => r.id === cur) || {}).name; if (nm) try { history.replaceState(null, '', '?repo=' + nm); } catch {} }  // the address bar names the repo
