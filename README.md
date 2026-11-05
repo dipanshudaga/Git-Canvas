@@ -7,8 +7,8 @@
 **See a whole GitHub repository on one canvas.**
 Each branch is a column. Each commit is a card.
 
-[![npm version](https://img.shields.io/npm/v/mapgit?color=4c1d95&label=npm)](https://www.npmjs.com/package/mapgit)
-[![Licence: MIT](https://img.shields.io/badge/licence-MIT-4c1d95.svg)](LICENSE)
+[![npm version](https://img.shields.io/npm/v/mapgit?color=6d28d9&label=npm)](https://www.npmjs.com/package/mapgit)
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-6d28d9.svg)](LICENSE)
 
 </div>
 
