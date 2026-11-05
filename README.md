@@ -76,7 +76,7 @@ Click a card or a branch title. Map Git shows a plain explanation and the Git co
 | Move around | Drag the background. Scroll or pinch to zoom. |
 | See everything | Press **F**, or use the fit button. |
 | Go to the newest commits | Press **N**. |
-| Open a branch fully | Click its title. Use **Expand all** for every branch. |
+| Show older commits | Click **Show older commits** under a branch. Use **Expand all** for every branch. |
 | Hide branches | Open **Filters**. Hide old branches, merged branches, or branches without conflicts. |
 | Move a card | Drag it. Press **T**, or use the tidy button, to put everything back. |
 | Change the order of the columns | Drag a branch title sideways. |
