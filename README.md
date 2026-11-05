@@ -14,7 +14,11 @@ Each branch is a column. Each commit is a card.
 
 <br>
 
-Map Git draws a whole GitHub repository on one canvas. You see every branch, where it started, and where it merged. It only reads. It never changes your repository.
+Git is hard to understand from text alone. If you are a hobbyist developer, a designer, or new to code, a list of commands and commits does not show you what is happening.
+
+Map Git lets you learn Git by looking. It draws a whole GitHub repository on one canvas: every branch, where it started, and where it merged. Press the **i** button to see what words such as *branch*, *commit*, and *merge* mean.
+
+Map Git only reads. It never changes your repository.
 
 ![A Map Git map. Branches are colored columns. Commits are cards. A panel explains a merge conflict.](https://raw.githubusercontent.com/dipanshudaga/Map-Git/main/assets/preview.png)
 
@@ -40,7 +44,7 @@ npx mapgit facebook/react
 - Where each branch started, and where it merged.
 - Merge conflicts, pull requests, CI results, and tags.
 
-Click any card or branch for a plain explanation and the Git commands for it.
+Click any card or branch for a plain explanation and the Git commands for it. Press the **i** button for a list of Git words in plain language.
 
 ## Private repositories
 
