@@ -18,6 +18,9 @@ See a GitHub repository as a map of branches and commits.
 Usage:
   git-canvas [owner/repo | github-url] [options]
 
+With no repository, Git Canvas opens the GitHub remote of the current
+folder. If the folder has none, it opens an empty canvas.
+
 Options:
   -p, --port <number>   Port to use (default 4747)
       --no-open         Do not open the browser
@@ -48,6 +51,26 @@ function parse(argv) {
 function repoName(v) {
   const m = /^(?:https?:\/\/)?(?:www\.)?(?:github\.com\/)?([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:\/.*)?$/.exec(String(v || '').trim());
   return m ? m[1] + '/' + m[2] : '';
+}
+
+// Parse a GitHub remote address: https, ssh://, or git@github.com:owner/repo(.git)
+function remoteRepo(url) {
+  const m = /^(?:(?:https?|ssh|git):\/\/(?:[^@\/]+@)?|[^@\/\s]+@)github\.com[:\/]([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/i.exec(String(url || '').trim());
+  return m ? m[1] + '/' + m[2] : '';
+}
+
+// The GitHub repository of the current folder, if it has one (prefers the "origin" remote).
+function folderRepo() {
+  return new Promise(resolve => {
+    execFile('git', ['remote', '-v'], { timeout: 3000, windowsHide: true }, (err, out) => {
+      if (err) return resolve('');
+      const remotes = {};
+      for (const line of String(out).split('\n')) { const m = /^(\S+)\s+(\S+)\s+\(fetch\)/.exec(line); if (m) remotes[m[1]] = m[2]; }
+      const order = ['origin', ...Object.keys(remotes).filter(k => k !== 'origin')];
+      for (const k of order) { const r = remoteRepo(remotes[k]); if (r) return resolve(r); }
+      resolve('');
+    });
+  });
 }
 
 function findToken() {
@@ -110,7 +133,8 @@ async function main() {
   if (o.version) return void console.log(VERSION);
   if (o.bad) { console.error(`Unknown option: ${o.bad}\n\n${HELP}`); process.exit(2); }
   if (!Number.isInteger(o.port) || o.port < 1 || o.port > 65535) { console.error('The port must be a number from 1 to 65535.'); process.exit(2); }
-  const name = o.repo ? repoName(o.repo) : '';
+  let name = o.repo ? repoName(o.repo) : '', fromFolder = false;
+  if (!o.repo) { name = await folderRepo(); fromFolder = !!name; }
   if (o.repo && !name) { console.error(`"${o.repo}" is not a GitHub repository. Use owner/repo or a github.com link.`); process.exit(2); }
   if (Number(process.versions.node.split('.')[0]) < 18) { console.error('Git Canvas needs Node.js 18 or later.'); process.exit(1); }
 
@@ -124,6 +148,7 @@ async function main() {
   }
   const url = `http://127.0.0.1:${port}/` + (name ? `?repo=${name}` : '');
   console.log(`Git Canvas is running at ${url}`);
+  if (fromFolder) console.log(`Opening ${name}, the GitHub remote of this folder.`);
   console.log(token ? 'Signed in to GitHub. Private repositories and 5,000 requests each hour are available.' : 'Not signed in to GitHub. Public repositories only, and 60 requests each hour.\nTo sign in, run "gh auth login", then start Git Canvas again.');
   console.log('Press Ctrl+C to stop.');
   if (o.open) openBrowser(url);
@@ -131,4 +156,4 @@ async function main() {
   process.on('SIGINT', stop); process.on('SIGTERM', stop);
 }
 
-if (require.main === module) main(); else module.exports = { parse, repoName, createServer };
+if (require.main === module) main(); else module.exports = { parse, repoName, remoteRepo, folderRepo, createServer };

@@ -15,9 +15,12 @@ Run this command in a terminal:
 npx git-canvas
 ```
 
-Git Canvas opens in your browser. Paste a link to a GitHub repository.
+Git Canvas opens in your browser.
 
-To open a repository at once, add its name:
+- In a folder with a GitHub remote, Git Canvas opens that repository.
+- In any other folder, Git Canvas opens an empty canvas. Paste a link to a GitHub repository.
+
+To open a different repository, add its name:
 
 ```bash
 npx git-canvas facebook/react
@@ -70,7 +73,7 @@ Git Canvas starts a small server on your computer. The server listens on `127.0.
 
 The page asks the server for GitHub data. The server adds your login and sends the request to `api.github.com`. The page draws the map.
 
-Git Canvas reads GitHub only. It does not read folders or commits on your computer.
+Git Canvas reads GitHub only. It reads the remote address of the current folder, to find the repository name. It does not read commits or files on your computer.
 
 Git Canvas has no account, no database, and no analytics. The page loads no scripts from other sites.
 
