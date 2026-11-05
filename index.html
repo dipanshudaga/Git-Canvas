@@ -172,8 +172,8 @@
   #sug { margin-top:var(--s2); border-radius:var(--r2); max-height:200px; overflow:auto; display:none; box-shadow:0 0 0 1px var(--line) inset; padding:var(--s1) }
   #sug.open { display:block } #sug div { height:var(--c-sm); padding:0 var(--s2); border-radius:var(--r1); cursor:pointer; display:flex; align-items:center; gap:var(--s2); font:var(--t-body) }
   #sug div.on,#sug div:hover { background:var(--accent-bg) } #sug i { font:var(--t-caption-strong); margin-left:auto; color:var(--ok); background:var(--okbg); border-radius:var(--pill); padding:0 var(--s2) }
-  #help { right:var(--edge); bottom:calc(var(--edge) + var(--bar) + var(--s2)); padding:var(--s4); width:360px; max-width:calc(100vw - 2 * var(--edge)); max-height:calc(100vh - 2 * var(--edge) - var(--bar) - var(--s2) - var(--s4)); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; padding-bottom:0; display:none }
-  #help.open { display:block } #help h3 { font:var(--t-title); margin:calc(-1 * var(--s4)) calc(-1 * var(--s4)) var(--s2); padding:var(--s4) var(--s4) var(--s3); position:sticky; top:0; background:var(--panel); z-index:1 } #help::after { content:''; display:block; position:sticky; bottom:0; height:32px; margin:0 calc(-1 * var(--s4)); background:linear-gradient(rgba(255,255,255,0), #fff 85%); pointer-events:none } #help ul { padding-left:var(--s4) } #help li { margin-top:var(--s2) } #help li .i { vertical-align:-3px } #help h4 { font:var(--t-overline); letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:var(--s4) 0 var(--s1) } #help dt { font:var(--t-label); margin-top:var(--s3); display:flex; align-items:center; gap:var(--s2) } #help dd { font:var(--t-body); color:var(--muted); margin:var(--s1) 0 0 } #help .dot { width:12px; height:12px; border-radius:50%; flex:none }
+  #help { right:var(--edge); bottom:calc(var(--edge) + var(--bar) + var(--s2)); padding:var(--s4); width:320px; max-width:calc(100vw - 2 * var(--edge)); max-height:calc(100vh - 2 * var(--edge) - var(--bar) - var(--s2) - var(--s4)); overflow-y:auto; display:none }
+  #help.open { display:block } #help h3 { font:var(--t-title); margin-bottom:var(--s3) } #help ul { padding-left:var(--s4) } #help li { margin-top:var(--s2) } #help li .i { vertical-align:-3px }
   .sw { display:inline-block; width:24px; height:0; border-top:3px solid; vertical-align:middle; margin-right:var(--s1) } .sw.d { border-top-style:dashed }
   #empty { position:fixed; inset:0; display:none; place-items:center; color:var(--muted); pointer-events:none; text-align:center; font:var(--t-title); padding:0 20%; z-index:1 }
   #empty small { font:var(--t-body) }
@@ -216,27 +216,16 @@
 </div>
 
 <div id="help" class="float">
-  <h3>Git terms, in plain words</h3>
-  <dl>
-    <dt>Repository</dt><dd>A project and its whole history. This map shows one repository.</dd>
-    <dt>Main branch <span class="dot" style="background:#15803d"></span></dt><dd>The branch the project is built on, usually named <code>main</code>. It holds the version everyone agrees is the real one. It is the green column.</dd>
-    <dt>Branch <span class="dot" style="background:#6d28d9"></span></dt><dd>A separate line of work. You try an idea on a branch and the main code stays safe. Each colored column is a branch.</dd>
-    <dt>Commit</dt><dd>A saved snapshot of the code, with a message and an author. Each card is a commit. The short code on it, such as <code>a1b2c3d</code>, is its ID.</dd>
-    <dt>Merge <span class="sw"></span></dt><dd>Joining the work of one branch into another, usually into main. The solid line shows it.</dd>
-    <dt>Split <span class="sw d"></span></dt><dd>The place where a branch started from main. The dashed line shows it.</dd>
-    <dt>Pull request</dt><dd>A request to merge a branch. Other people look at the work first. It is the white card above a branch.</dd>
-    <dt>Merge conflict</dt><dd>Two branches changed the same lines. Git cannot choose, so a person must.</dd>
-    <dt>Ahead and behind</dt><dd><b>Ahead</b> is the number of commits a branch has that main does not. <b>Behind</b> is the number of commits main got after the branch split.</dd>
-    <dt>Fully merged</dt><dd>All the work of the branch is already in main. It is safe to delete.</dd>
-    <dt>Tag</dt><dd>A name on one commit, often a release such as <code>v1.0</code>.</dd>
-    <dt>CI</dt><dd>Automatic checks, such as tests, that run on a commit. Green means they passed.</dd>
-    <dt>Stale</dt><dd>A branch that nobody has changed for a long time.</dd>
-  </dl>
-  <h4>Use the map</h4>
+  <h3>How to read this board</h3>
   <ul>
-    <li><b>Newer commits are higher.</b></li>
-    <li><b>Click</b> anything for a plain explanation and the Git commands for it.</li>
+    <li>Each <b>column is a branch</b>. Its colored title sits right above its newest commit. Green is the main branch.</li>
+    <li>Each <b>card is a commit</b>: a saved snapshot of the code. <b>Newer is higher.</b></li>
+    <li>A white card with a colored border above a branch is its <b>pull request</b>.</li>
+    <li><span class="sw d"></span>dashed line: where a branch <b>split off</b> main.</li>
+    <li><span class="sw"></span>solid line into main: a <b>merge</b>.</li>
     <li><b>Drag</b> a card to move it. Drag a branch title to change the order of the columns. <b>Tidy up</b> <svg class="i" aria-hidden="true"><use href="#i-tidy"/></svg> puts everything back.</li>
+    <li>Click anything for a plain explanation and the exact Git commands.</li>
+    <li>Hover the <svg class="i" aria-hidden="true"><use href="#i-info"/></svg> icon next to a word to learn what it means.</li>
   </ul>
 </div>
 
