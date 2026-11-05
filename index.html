@@ -305,7 +305,7 @@ function layout() {
   for (const ln of lanes) {
     const all = ln.commits;
     let n = START;
-    ln.open = expanded.has(ln.name); ln.gapRuns = [];
+    ln.open = expanded.has(ln.name); ln.gapRuns = []; ln.openRuns = [];
     if (ln.is_base) {
       // The main branch is condensed: the newest commits, every fork point and every tagged release stay visible, down to the deepest fork point.
       // Each run of commits between two visible ones folds into one "Show N hidden commits" pill, so every branch still hangs off its commit.
@@ -314,7 +314,10 @@ function layout() {
       for (let i = 0; i <= Math.min(START - 1, all.length - 1); i++) keep.add(i);
       forks.forEach(i => keep.add(i)); all.forEach((c, i) => { if (i <= deep && (data.tags || {})[c.hash]) keep.add(i); });
       let idx = [...keep].sort((a, b) => a - b);
-      for (let k = 0; k + 1 < idx.length; k++) if (idx[k + 1] - idx[k] > 1 && expanded.has('gap:' + all[idx[k]].hash)) for (let i = idx[k] + 1; i < idx[k + 1]; i++) keep.add(i);
+      for (let k = 0; k + 1 < idx.length; k++) if (idx[k + 1] - idx[k] > 1 && expanded.has('gap:' + all[idx[k]].hash)) {
+        for (let i = idx[k] + 1; i < idx[k + 1]; i++) keep.add(i);
+        ln.openRuns.push({ key: 'gap:' + all[idx[k]].hash, after: all[idx[k]], last: all[idx[k + 1] - 1], before: all[idx[k + 1]], count: idx[k + 1] - idx[k] - 1 });
+      }
       idx = [...keep].sort((a, b) => a - b);
       if (ln.open) { ln.shown = all; }
       else {
@@ -340,6 +343,11 @@ function layout() {
     const id = '~gap:' + g.after.hash;
     owner[id] = ln; byHash[id] = { hash: id, ct: g.before.ct + .01, parents: [g.before.hash] }; foldOf[g.after.hash] = id;
   }
+  for (const ln of lanes) for (const g of ln.openRuns || []) {  // an opened run ends with a "Hide" pill, so it can be folded again
+    if (ln.open) break;
+    const id = '~hide:' + g.after.hash;
+    owner[id] = ln; byHash[id] = { hash: id, ct: g.before.ct + .01, parents: [g.before.hash] }; foldOf[g.last.hash] = id;
+  }
   const attachOf = {};  // oldest commit of a fully shown branch whose real parent is not drawn: it hangs off the main-line commit that contains the fork point
   for (const ln of lanes) if (!ln.is_base && !ln.hiddenLocal && ln.shown.length && ln.mbm in owner && owner[ln.mbm] !== ln) {
     const o = ln.shown[ln.shown.length - 1]; if (!byHash[o.hash].parents.some(p => p in owner)) attachOf[o.hash] = ln.mbm;
@@ -363,6 +371,7 @@ function layout() {
   for (const ln of lanes) {
     ln.cards = ln.shown.filter(c => owner[c.hash] === ln).map(c => add(c.hash, 'card', ln, ln.x, y0 + (maxRow - row[c.hash]) * ROWY, CW, CH, { c }));
     ln.gaps = (ln.gapRuns || []).map(g => add(g.key, 'gap', ln, ln.x, y0 + (maxRow - row['~gap:' + g.after.hash]) * ROWY + (CH - 40) / 2, CW, 40, { gap: g }));
+    ln.hides = ln.open ? [] : (ln.openRuns || []).map(g => add('hide:' + g.key, 'gap', ln, ln.x, y0 + (maxRow - row['~hide:' + g.after.hash]) * ROWY + (CH - 40) / 2, CW, 40, { gap: g, hide: true }));
     const top = ln.cards.length ? Math.min(...ln.cards.map(k => k.y)) : y0;
     ln.tip = ln.cards.find(k => k.y === top) || null;
     let y = top, headY;
@@ -453,6 +462,9 @@ function draw(animate = true, anchorKey = null, mutate = null) {
   for (const ln of L.lanes) for (const it of ln.gaps || []) {
     const g = it.gap, d = mk(it, 'more', `${ico('chevron-down')}Show ${g.count} hidden commit${g.count > 1 ? 's' : ''}`); d.style.borderColor = d.style.color = ln.color; d.onclick = () => toggleGap(g);
   }
+  for (const ln of L.lanes) for (const it of ln.hides || []) {
+    const g = it.gap, d = mk(it, 'more', `${ico('chevron-up')}Hide ${g.count} commit${g.count > 1 ? 's' : ''}`); d.style.borderColor = d.style.color = ln.color; d.onclick = () => toggleGap(g);
+  }
   for (const ln of L.lanes) if (ln.moreItem) {
     const it = ln.moreItem, hid = ln.hiddenLocal;
     if (hid > 0) { const d = mk(it, 'more', `${ico('chevron-down')}Show ${hid} older commit${hid > 1 ? 's' : ''}`); d.style.borderColor = d.style.color = ln.color; d.onclick = () => toggleLane(ln.name); }
@@ -521,6 +533,9 @@ function drawEdges() {
   });
   for (const ln of L.lanes) for (const it of ln.gaps || []) {  // the main line runs through each folded run
     const up = L.at[it.gap.after.hash], dn = L.at[it.gap.before.hash]; if (up) vert(it, up, ln.color, 3, '2 7'); if (dn) vert(dn, it, ln.color, 3, '2 7');
+  }
+  for (const ln of L.lanes) for (const it of ln.hides || []) {
+    const up = L.at[it.gap.last.hash], dn = L.at[it.gap.before.hash]; if (up) vert(it, up, ln.color, 3); if (dn) vert(dn, it, ln.color, 3);
   }
   for (const ln of L.lanes) {  // a branch's oldest commit plugs into the main line, and a merged branch points at its commit
     if (ln.pinned) link(ln.headItem, ln.pinned, ln.color, 'stroke-dasharray="2 6"', 0);
