@@ -43,6 +43,7 @@ npx mapgit facebook/react
 - Branches as columns, with newer commits higher.
 - Where each branch started, and where it merged.
 - Merge conflicts, pull requests, CI results, and tags.
+- A long main branch is folded. Click **Show N hidden commits** to open a run. The commits where branches start, and tagged releases, always stay visible.
 
 Click any card or branch for a plain explanation and the Git commands for it. Hold the pointer over a small **i** icon next to a word to learn what it means.
 

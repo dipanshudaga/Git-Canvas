@@ -59,7 +59,7 @@
   #status:empty { display:none }
   #status { position:fixed; top:calc(var(--edge) + var(--bar) + var(--s2)); left:var(--edge); z-index:4; font:var(--t-body); color:var(--muted); background:rgba(255,255,255,.9); backdrop-filter:blur(6px); padding:var(--s1) var(--s3); border-radius:var(--pill); box-shadow:0 0 0 1px var(--line); white-space:nowrap; max-width:min(640px, calc(100vw - 2 * var(--edge))); overflow:hidden; text-overflow:ellipsis }
   #dock { bottom:var(--edge); left:50%; transform:translateX(-50%); width:max-content; max-width:calc(100vw - 2 * var(--edge)); height:var(--bar); display:flex; align-items:center; gap:var(--s1); padding:0 var(--s2) }
-  body.side #dock { left:calc((100vw - 416px) / 2) }
+  body.side #dock { left:max(calc((100vw - 416px) / 2), 188px) }
   #zoom { right:var(--edge); bottom:var(--edge); height:var(--bar); display:flex; align-items:center; gap:var(--s1); padding:0 var(--s2) }
   #zl { min-width:56px; text-align:center; color:var(--muted); font:var(--t-label); font-variant-numeric:tabular-nums }
 
@@ -316,11 +316,25 @@ function layout() {
   for (const ln of lanes) {
     const all = ln.commits;
     let n = START;
-    if (ln.is_base) {  // keep the main line visible down to the deepest fork point so every branch hangs off something
-      const forks = lanes.filter(l => !l.is_base && l.mbm in baseIdx).map(l => baseIdx[l.mbm] + 1);
-      n = Math.min(all.length, Math.max(START, ...forks, 0));
+    ln.open = expanded.has(ln.name); ln.gapRuns = [];
+    if (ln.is_base) {
+      // The main branch is condensed: the newest commits, every fork point and every tagged release stay visible, down to the deepest fork point.
+      // Each run of commits between two visible ones folds into one "Show N hidden commits" pill, so every branch still hangs off its commit.
+      const forks = lanes.filter(l => !l.is_base && l.mbm in baseIdx).map(l => baseIdx[l.mbm]);
+      const deep = Math.min(all.length - 1, Math.max(START - 1, ...forks, 0)), keep = new Set();
+      for (let i = 0; i <= Math.min(START - 1, all.length - 1); i++) keep.add(i);
+      forks.forEach(i => keep.add(i)); all.forEach((c, i) => { if (i <= deep && (data.tags || {})[c.hash]) keep.add(i); });
+      let idx = [...keep].sort((a, b) => a - b);
+      for (let k = 0; k + 1 < idx.length; k++) if (idx[k + 1] - idx[k] > 1 && expanded.has('gap:' + all[idx[k]].hash)) for (let i = idx[k] + 1; i < idx[k + 1]; i++) keep.add(i);
+      idx = [...keep].sort((a, b) => a - b);
+      if (ln.open) { ln.shown = all; }
+      else {
+        ln.shown = idx.map(i => all[i]);
+        for (let k = 0; k + 1 < idx.length; k++) if (idx[k + 1] - idx[k] > 1) ln.gapRuns.push({ key: 'gap:' + all[idx[k]].hash, after: all[idx[k]], before: all[idx[k + 1]], count: idx[k + 1] - idx[k] - 1 });
+      }
+      ln.hiddenLocal = ln.open ? 0 : all.length - (idx.length ? idx[idx.length - 1] + 1 : 0);
+      continue;
     }
-    ln.open = expanded.has(ln.name);
     ln.shown = ln.open ? all : all.slice(0, n);
     ln.hiddenLocal = all.length - ln.shown.length;
   }
@@ -332,6 +346,10 @@ function layout() {
   for (const ln of lanes) if (ln.hiddenLocal > 0 && ln.shown.length) {
     const id = '~fold:' + ln.name, oldest = ln.shown[ln.shown.length - 1];
     owner[id] = ln; byHash[id] = { hash: id, ct: oldest.ct - 1, parents: ln.mbm && ln.mbm in owner ? [ln.mbm] : [] }; foldOf[oldest.hash] = id;
+  }
+  for (const ln of lanes) for (const g of ln.gapRuns || []) {
+    const id = '~gap:' + g.after.hash;
+    owner[id] = ln; byHash[id] = { hash: id, ct: g.before.ct + .01, parents: [g.before.hash] }; foldOf[g.after.hash] = id;
   }
   const attachOf = {};  // oldest commit of a fully shown branch whose real parent is not drawn: it hangs off the main-line commit that contains the fork point
   for (const ln of lanes) if (!ln.is_base && !ln.hiddenLocal && ln.shown.length && ln.mbm in owner && owner[ln.mbm] !== ln) {
@@ -355,6 +373,7 @@ function layout() {
   const slots = [], place = (ln, top, bot) => { let c = 0; while ((slots[c] || []).some(([a, b]) => top < b && bot > a)) c++; (slots[c] ||= []).push([top, bot]); ln.col = realCols + c; ln.x = ln.col * COLX; };
   for (const ln of lanes) {
     ln.cards = ln.shown.filter(c => owner[c.hash] === ln).map(c => add(c.hash, 'card', ln, ln.x, y0 + (maxRow - row[c.hash]) * ROWY, CW, CH, { c }));
+    ln.gaps = (ln.gapRuns || []).map(g => add(g.key, 'gap', ln, ln.x, y0 + (maxRow - row['~gap:' + g.after.hash]) * ROWY + (CH - 40) / 2, CW, 40, { gap: g }));
     const top = ln.cards.length ? Math.min(...ln.cards.map(k => k.y)) : y0;
     ln.tip = ln.cards.find(k => k.y === top) || null;
     let y = top, headY;
@@ -442,6 +461,9 @@ function draw(animate = true, anchorKey = null, mutate = null) {
     const t = tint(ln.color, merge ? .28 : .14);
     d.style.background = `linear-gradient(${t},${t}),#fff`; d.style.borderColor = ln.color;
   }
+  for (const ln of L.lanes) for (const it of ln.gaps || []) {
+    const g = it.gap, d = mk(it, 'more', `${ico('chevron-down')}Show ${g.count} hidden commit${g.count > 1 ? 's' : ''}`); d.style.borderColor = d.style.color = ln.color; d.onclick = () => toggleGap(g);
+  }
   for (const ln of L.lanes) if (ln.moreItem) {
     const it = ln.moreItem, hid = ln.hiddenLocal;
     if (hid > 0) { const d = mk(it, 'more', `${ico('chevron-down')}Show ${hid} older commit${hid > 1 ? 's' : ''}`); d.style.borderColor = d.style.color = ln.color; d.onclick = () => toggleLane(ln.name); }
@@ -508,6 +530,9 @@ function drawEdges() {
     const isMerge = idx > 0 || k.ln.is_base;
     link(k, par, isMerge ? par.ln.color : k.ln.color, isMerge ? '' : 'stroke-dasharray="7 6"', idx);
   });
+  for (const ln of L.lanes) for (const it of ln.gaps || []) {  // the main line runs through each folded run
+    const up = L.at[it.gap.after.hash], dn = L.at[it.gap.before.hash]; if (up) vert(it, up, ln.color, 3, '2 7'); if (dn) vert(dn, it, ln.color, 3, '2 7');
+  }
   for (const ln of L.lanes) {  // a branch's oldest commit plugs into the main line, and a merged branch points at its commit
     if (ln.pinned) link(ln.headItem, ln.pinned, ln.color, 'stroke-dasharray="2 6"', 0);
     else if (!ln.is_base && ln.cards.length && !ln.hiddenLocal && ln.mbm && L.at[ln.mbm]) {
@@ -621,6 +646,7 @@ function focusKey(key, select) {
 }
 
 // ---------- expand / filters ----------
+const toggleGap = g => { expanded.has(g.key) ? expanded.delete(g.key) : expanded.add(g.key); store.set(expKey(), [...expanded]); draw(true, g.after.hash); };
 const toggleLane = name => { expanded.has(name) ? expanded.delete(name) : expanded.add(name); store.set(expKey(), [...expanded]); draw(true, 'more:' + name); };
 $('expAll').onclick = () => {
   const all = L.lanes.every(l => expanded.has(l.name) || l.commits.length <= START);
