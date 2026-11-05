@@ -12,7 +12,7 @@ Requirement: Node.js 18 or later.
 Run this command in a terminal:
 
 ```bash
-npx git-canvas
+npx @dipanshudaga/git-canvas
 ```
 
 Git Canvas opens in your browser.
@@ -23,7 +23,7 @@ Git Canvas opens in your browser.
 To open a different repository, add its name:
 
 ```bash
-npx git-canvas facebook/react
+npx @dipanshudaga/git-canvas facebook/react
 ```
 
 ## What you can see

@@ -1,5 +1,6 @@
 {
-  "name": "git-canvas",
+  "name": "@dipanshudaga/git-canvas",
+  "publishConfig": { "access": "public" },
   "version": "1.0.0",
   "description": "See a GitHub repository as a map of branches and commits. Run one command in a terminal.",
   "bin": { "git-canvas": "bin/git-canvas.js" },
