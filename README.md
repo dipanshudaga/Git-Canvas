@@ -1,7 +1,25 @@
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/dipanshudaga/Map-Git/main/favicon.svg" alt="Map Git logo" width="56" height="56">
+
 # Map Git
 
-Map Git shows a GitHub repository as a map.
+**See a whole GitHub repository on one canvas.**
 Each branch is a column. Each commit is a card.
+
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-4c1d95.svg)](LICENSE)
+[![Node.js 18 or later](https://img.shields.io/badge/node-%E2%89%A518-4c1d95.svg)](https://nodejs.org)
+[![No dependencies](https://img.shields.io/badge/dependencies-0-4c1d95.svg)](package.json)
+
+</div>
+
+<br>
+
+Many people want to see how a Git repository fits together. The usual tools show one small part at a time: a list of commits, or a thin line of dots. A repository with many branches is hard to read in them.
+
+Map Git draws the whole repository on one canvas. You see every branch, where each one started, and where it ended. You can zoom in on any branch or commit.
+
+Map Git is for reading a repository, not for changing it. It never changes your repository.
 
 ![A Map Git map. Branches are colored columns. Commits are cards. A panel explains a merge conflict.](https://raw.githubusercontent.com/dipanshudaga/Map-Git/main/assets/preview.png)
 
@@ -26,22 +44,16 @@ To open a different repository, add its name:
 npx mapgit facebook/react
 ```
 
-## The problem
-
-You want to see how a Git repository is built. You want to see which branches exist, where each one started, and where it ended.
-
-The usual tools show a long list of commits, or a thin line graph. A repository with many branches is hard to read in them. You cannot see all of it at once.
-
-Map Git draws the whole repository on one canvas. Each branch is a column. You see the structure at a glance, and you can zoom in on any branch or commit.
-
-Map Git is for people who want to understand a repository, not change it. It reads only. It never changes your repository.
-
 ## What you can see
 
-- Branches as columns. Newer commits are higher.
-- The place where each branch started, and the place where it merged.
-- Merge conflicts between a branch and the main branch.
-- Pull requests, CI results, and tags.
+| You see | How it looks |
+|---|---|
+| **Branches** | Columns. Newer commits are higher. |
+| **Forks and merges** | A line from the place where a branch started, and a mark where it merged. |
+| **Merge conflicts** | A warning on each branch that clashes with the main branch. |
+| **Pull requests** | A card above the branch. |
+| **CI results** | A status on each branch. |
+| **Tags** | A label on the tagged commit. |
 
 Click a card or a branch title. Map Git shows a plain explanation and the Git commands for that item.
 
@@ -53,18 +65,18 @@ Click a card or a branch title. Map Git shows a plain explanation and the Git co
 
 Map Git uses your GitHub CLI login. It also reads the `GITHUB_TOKEN` variable.
 
-NOTE: A login raises the limit from 60 to 5,000 requests each hour. It also adds CI results.
+> **Note:** A login raises the limit from 60 to 5,000 requests each hour. It also adds CI results.
 
-CAUTION: The login stays on your computer. The browser never receives it.
+> **Caution:** The login stays on your computer. The browser never receives it.
 
 ## Options
 
 | Option | Purpose |
 |---|---|
-| `-p`, `--port <number>` | Use this port. The default is 4747 |
-| `--no-open` | Do not open the browser |
-| `-v`, `--version` | Show the version |
-| `-h`, `--help` | Show the help |
+| `-p`, `--port <number>` | Use this port. The default is 4747. |
+| `--no-open` | Do not open the browser. |
+| `-v`, `--version` | Show the version. |
+| `-h`, `--help` | Show the help. |
 
 ## Know the limits
 
@@ -74,6 +86,7 @@ Without a login, GitHub gives each network 60 requests each hour. One repository
 - Without a login, Map Git loads the 12 branches with the newest pushes.
 - A fork point older than 300 commits on the main branch has no line.
 - A squash-merged branch looks unmerged. Squash merging changes the commits.
+- Map Git shows what is on GitHub. It does not show local commits, local branches, or uncommitted changes. Push first, then press **Reload**.
 
 If GitHub refuses a request, Map Git shows the time to wait.
 
@@ -81,9 +94,11 @@ If GitHub refuses a request, Map Git shows the time to wait.
 
 Map Git starts a small server on your computer. The server listens on `127.0.0.1` only. Other computers cannot reach it.
 
-The page asks the server for GitHub data. The server adds your login and sends the request to `api.github.com`. The page draws the map.
+1. The page asks the server for GitHub data.
+2. The server adds your login and sends the request to `api.github.com`.
+3. The page draws the map.
 
-Map Git reads GitHub only. It reads the remote address of the current folder, to find the repository name. It does not read commits or files on your computer.
+Map Git reads the remote address of the current folder, to find the repository name. It does not read commits or files on your computer.
 
 Map Git has no account, no database, and no analytics. The page loads no scripts from other sites.
 
@@ -107,6 +122,6 @@ Map Git has no dependencies to install.
 
 ## Licence
 
-MIT. See `LICENSE`.
+MIT. See [LICENSE](LICENSE).
 
 Map Git is not made by GitHub.
