@@ -1,6 +1,6 @@
 {
   "name": "mapgit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "See a GitHub repository as a map of branches and commits. Run one command in a terminal.",
   "bin": {
     "mapgit": "bin/mapgit.js"
