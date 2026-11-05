@@ -26,6 +26,16 @@ To open a different repository, add its name:
 npx mapgit facebook/react
 ```
 
+## The problem
+
+You want to see how a Git repository is built. You want to see which branches exist, where each one started, and where it ended.
+
+The usual tools show a long list of commits, or a thin line graph. A repository with many branches is hard to read in them. You cannot see all of it at once.
+
+Map Git draws the whole repository on one canvas. Each branch is a column. You see the structure at a glance, and you can zoom in on any branch or commit.
+
+Map Git is for people who want to understand a repository, not change it. It reads only. It never changes your repository.
+
 ## What you can see
 
 - Branches as columns. Newer commits are higher.

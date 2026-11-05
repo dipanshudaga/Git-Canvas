@@ -310,6 +310,11 @@ function layout() {
   const items = {};  // key -> {key, kind, lane, x, y, w, h, ...}
   const add = (key, kind, ln, x, y, w, h, extra) => items[key] = { key, kind, ln, x, y, w, h, ...extra };
   const forkOf = {}; for (const ln of lanes) if (!ln.is_base && ln.mb) (forkOf[ln.mbm] ||= []).push(ln.name);
+  // A fully merged branch has no commits of its own: it is only a title card beside the commit it points at. Those cards share columns
+  // (stacked where they do not overlap) and sit right next to the main line, so a short line joins each one to its commit.
+  const emptyLane = ln => !ln.is_base && ln.mbm && ln.mbm in owner && !ln.shown.some(c => owner[c.hash] === ln);
+  let realCols = 0; for (const ln of lanes) if (!emptyLane(ln)) { ln.col = realCols++; ln.x = ln.col * COLX; }
+  const slots = [], place = (ln, top, bot) => { let c = 0; while ((slots[c] || []).some(([a, b]) => top < b && bot > a)) c++; (slots[c] ||= []).push([top, bot]); ln.col = realCols + c; ln.x = ln.col * COLX; };
   for (const ln of lanes) {
     ln.cards = ln.shown.filter(c => owner[c.hash] === ln).map(c => add(c.hash, 'card', ln, ln.x, y0 + (maxRow - row[c.hash]) * ROWY, CW, CH, { c }));
     const top = ln.cards.length ? Math.min(...ln.cards.map(k => k.y)) : y0;
@@ -317,8 +322,10 @@ function layout() {
     let y = top, headY;
     ln.prItem = null;
     ln.pinned = !ln.cards.length && ln.mbm && items[ln.mbm] && items[ln.mbm].kind === 'card' ? items[ln.mbm] : null;  // nothing of its own to draw: sit next to the commit it points at
-    if (ln.pinned) { headY = ln.pinned.y; if (ln.pr) ln.prItem = add('pr:' + ln.name, 'pr', ln, ln.x, headY - GAP - PRH, CW, PRH, { pr: ln.pr }); }
-    else { if (ln.pr) { y -= PRH + GAP; ln.prItem = add('pr:' + ln.name, 'pr', ln, ln.x, y, CW, PRH, { pr: ln.pr }); } headY = y - GAP - HEAD_H; }
+    if (ln.pinned) { headY = ln.pinned.y; place(ln, headY - (ln.pr ? GAP + PRH : 0) - GAP, headY + HEAD_H + GAP); if (ln.pr) ln.prItem = add('pr:' + ln.name, 'pr', ln, ln.x, headY - GAP - PRH, CW, PRH, { pr: ln.pr }); }
+    else {
+      if (emptyLane(ln)) place(ln, y - (ln.pr ? PRH + GAP : 0) - GAP - HEAD_H - GAP, y + GAP);
+      if (ln.pr) { y -= PRH + GAP; ln.prItem = add('pr:' + ln.name, 'pr', ln, ln.x, y, CW, PRH, { pr: ln.pr }); } headY = y - GAP - HEAD_H; }
     ln.headItem = add('head:' + ln.name, 'head', ln, ln.x, headY, CW, HEAD_H);
     const lowest = ln.cards.length ? Math.max(...ln.cards.map(k => k.y)) : y0;
     ln.moreItem = null;
