@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Git Canvas</title>
-<meta name="description" content="Git Canvas shows a GitHub repository as a map. Each branch is a column. Each commit is a card. See merges, conflicts, pull requests, and CI. Paste a link to start.">
+<title>Map Git</title>
+<meta name="description" content="Map Git shows a GitHub repository as a map. Each branch is a column. Each commit is a card. See merges, conflicts, pull requests, and CI. Paste a link to start.">
 <meta name="theme-color" content="#4c1d95">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="favicon.png" type="image/png">
@@ -182,7 +182,7 @@
 <div id="viewport"><div id="world"><svg id="edges"></svg></div></div>
 <div id="empty"><div id="emptyMsg"></div></div>
 <div id="tl" class="float">
-  <span class="logo"><svg viewBox="0 0 480 600" width="16" height="20" aria-hidden="true"><path d="M0 0H480V80H80V520H400V340H280V420H200V180H280V260H480V600H0Z" fill="#4c1d95"/></svg>Git Canvas</span>
+  <span class="logo"><svg viewBox="0 0 480 600" width="16" height="20" aria-hidden="true"><path d="M0 0H480V80H80V520H400V340H280V420H200V180H280V260H480V600H0Z" fill="#4c1d95"/></svg>Map Git</span>
   <button class="rb" id="repoBtn" data-pop="pop" aria-haspopup="true"><span id="repoName">…</span><svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
 </div>
 <div id="status" role="status"></div>
@@ -690,7 +690,7 @@ const openRepo = async reload => {
 // ----- repository menu -----
 const setPopMsg = () => { $('popmsg').innerHTML = ''; };
 function showErr(el, e) {
-  el.innerHTML = `<div class="alert" role="alert">${ico('alert')}<div>${e.rate ? `<b>GitHub's free limit is used up</b>Try again in ${esc(e.wait)}.${authed() ? '' : ' Run <code>gh auth login</code> in your terminal, then restart Git Canvas, to raise the limit.'}` : esc(e.message)}</div></div>`;
+  el.innerHTML = `<div class="alert" role="alert">${ico('alert')}<div>${e.rate ? `<b>GitHub's free limit is used up</b>Try again in ${esc(e.wait)}.${authed() ? '' : ' Run <code>gh auth login</code> in your terminal, then restart Map Git, to raise the limit.'}` : esc(e.message)}</div></div>`;
 }
 const fillRepos = () => { $('repoName').textContent = (repos.find(r => r.id === cur) || {}).name || 'Add a repository'; };
 function renderRepoList() {
@@ -742,11 +742,11 @@ async function ghReq(path, { gql } = {}) {
   try {
     r = gql ? await fetch('gh/graphql', { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(gql) })
             : await fetch('gh' + path, { headers });
-  } catch { throw new Error('Could not reach GitHub. Check your connection, and that Git Canvas is still running in your terminal.'); }
+  } catch { throw new Error('Could not reach GitHub. Check your connection, and that Map Git is still running in your terminal.'); }
   const rem = r.headers.get('x-ratelimit-remaining'); if (rem != null) { rate.remaining = +rem; rate.limit = +r.headers.get('x-ratelimit-limit'); updateRate(); }
-  if (r.status === 401) throw new Error('GitHub rejected your sign-in (401). Run gh auth login in your terminal, then restart Git Canvas.');
+  if (r.status === 401) throw new Error('GitHub rejected your sign-in (401). Run gh auth login in your terminal, then restart Map Git.');
   if (r.status === 403 || r.status === 429) throw rem === '0' ? Object.assign(new Error('GitHub free limit used up'), { rate: true, wait: resetIn(r) }) : new Error('GitHub refused the request (403). ' + (tok ? 'Does your GitHub account have access to this repo (and is it authorised for SSO)?' : 'Most likely GitHub\'s free limit (60 requests per hour from your network) is used up, so try again in a while. It can also mean the repo is private.'));
-  if (r.status === 404) throw new Error(tok ? 'Repository not found, or your GitHub account cannot see it.' : "Couldn't find that repository. Private repo? Run gh auth login in your terminal, then restart Git Canvas.");
+  if (r.status === 404) throw new Error(tok ? 'Repository not found, or your GitHub account cannot see it.' : "Couldn't find that repository. Private repo? Run gh auth login in your terminal, then restart Map Git.");
   if (!r.ok) throw new Error('GitHub error ' + r.status);
   return r.json();
 }

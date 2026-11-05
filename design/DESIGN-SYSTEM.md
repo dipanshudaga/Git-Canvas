@@ -1,4 +1,4 @@
-# Git Canvas design system
+# Map Git design system
 
 Everything in `index.html` draws from the tokens at the top of its `<style>` block. Change a token, not a number.
 
