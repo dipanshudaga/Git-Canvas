@@ -737,7 +737,7 @@ const openRepo = async reload => {
     const d = await api(`api/graph?repo=${encodeURIComponent(cur)}&max=${effMax()}`, { method: reload ? 'POST' : 'GET' });
     data = d; data.github = (repos.find(r => r.id === cur) || {}).kind === 'github';
     expanded = new Set(store.get(expKey(), [])); offs = store.get(offKey(), {}); laneOrder = store.get(ordKey(), []); for (const k of Object.keys(offs)) if (k.startsWith('L:')) delete offs[k]; deselect(); closePops();  // (columns are reordered now, so old free-float offsets are dropped)
-    clearBoard(); draw(false); syncFilters(); updateStatus(); goNewest();
+    clearBoard(); draw(false); syncFilters(); updateStatus(); fit();
     $('empty').style.display = 'none'; document.body.classList.remove('empty'); setExp(false);
     { const nm = (repos.find(r => r.id === cur) || {}).name; if (nm) try { history.replaceState(null, '', '?repo=' + nm); } catch {} }  // the address bar names the repo
   } catch (e) { $('status').textContent = 'error: ' + e.message; showEmpty(esc(e.message)); }
